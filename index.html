@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="manifest.json">
+    <title>Finanças em Casal</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    
+    <!-- Notification Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="view hidden">
+        <div class="glass-card login-card">
+            <div class="logo">
+                <i class="fa-solid fa-wallet gradient-text"></i>
+                <h2>Finança<span class="gradient-text">Casal</span></h2>
+            </div>
+            <p class="subtitle">Acesse para gerenciar os gastos</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" required placeholder="seu@email.com">
+                </div>
+                <div class="input-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" required placeholder="Sua senha">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-primary" id="login-btn" style="flex: 1;">
+                        <span>Entrar</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="register-btn" style="flex: 1; text-align: center;">
+                        <span>Criar Conta</span>
+                    </button>
+                </div>
+                <div id="login-error" class="error-text"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Application -->
+    <div id="app-screen" class="view active">
+        <header class="app-header">
+            <div class="user-info">
+                <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <p class="greeting">Olá,</p>
+                    <h3 id="display-user-email">Usuário</h3>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div class="theme-toggle">
+                    <button id="theme-dark" class="active" title="Tema Escuro"><i class="fa-solid fa-moon"></i></button>
+                    <button id="theme-light" title="Tema Claro"><i class="fa-solid fa-sun"></i></button>
+                </div>
+                <button id="fab-add" class="btn-icon plus-top" style="background: var(--accent); color: white;"><i class="fa-solid fa-plus"></i></button>
+                <button id="logout-btn" class="btn-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <!-- Top Navigation (Tabs) -->
+        <nav class="top-nav glass-card">
+            <div class="nav-container">
+                <button class="nav-item active" data-tab="dashboard-view" title="Resumo">
+                    <i class="fa-solid fa-house"></i>
+                </button>
+                <button class="nav-item" data-tab="planning-view" title="Planejamento">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </button>
+                <button class="nav-item" data-tab="debts-view" title="Dívidas">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </button>
+                <button class="nav-item" data-tab="reports-view" title="Relatórios">
+                    <i class="fa-solid fa-chart-area"></i>
+                </button>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Dashboard View (Tab 1) -->
+            <div id="dashboard-view" class="tab-content transition-fade">
+                <!-- Month Navigator -->
+                <section class="month-navigator entrance-anim">
+                    <button id="prev-month" class="btn-icon"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 id="current-month-display">Janeiro 2024</h2>
+                    <button id="next-month" class="btn-icon"><i class="fa-solid fa-chevron-right"></i></button>
+                </section>
+
+                <!-- Balance Overview -->
+                <section class="balance-section entrance-anim glass-card highlight-card">
+                    <div style="text-align: center;">
+                        <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 8px;">💰 Saldo Livre Estimado</p>
+                        <h1 id="real-projection-display" style="font-size: 2.2rem; margin-bottom: 4px;">R$ 0,00</h1>
+                        <div class="projection-chip" style="margin: 0 auto; background: rgba(255,255,255,0.1);">
+                            <i class="fa-solid fa-wand-sparkles"></i>
+                            Total em conta: <span id="total-balance">R$ 0,00</span>
+                        </div>
+                        <div id="balance-insight-container"></div>
+                        <p style="font-size: 0.7rem; opacity: 0.6; margin-top: 8px;">Projeção estatística p/ fim do mês: <b id="stat-projection">R$ 0,00</b></p>
+                    </div>
+                </section>
+
+                <!-- Revelação Financeira (Main Insight Card) -->
+                <section id="main-revelation" class="insight-card glass-card entrance-anim hidden">
+                    <div class="prophetic-icon">
+                        <i class="fa-solid fa-fire-burner"></i>
+                    </div>
+                    <div class="prophetic-content">
+                        <h4>Revelação de Hoje</h4>
+                        <p id="prophetic-insight-text" class="prophetic-text">Buscando uma palavra para o seu bolso...</p>
+                    </div>
+                </section>
+
+                <!-- Quick Stats - Desktop: 4 columns -->
+                <div class="stats-grid">
+                    <div class="stat-card income">
+                        <div class="icon-circle"><i class="fa-solid fa-arrow-up"></i></div>
+                        <div>
+                            <p>Receitas</p>
+                            <h4 id="total-income">R$ 0,00</h4>
+                        </div>
+                    </div>
+                    <div class="stat-card expense">
+                        <div class="icon-circle"><i class="fa-solid fa-arrow-down"></i></div>
+                        <div>
+                            <p>Despesas</p>
+                            <h4 id="total-expense">R$ 0,00</h4>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-circle" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                           <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <p>Fixo</p>
+                            <h4 id="fixed-val">R$ 0</h4>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-circle" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                           <i class="fa-solid fa-percent"></i>
+                        </div>
+                        <div>
+                            <p>Variável</p>
+                            <h4 id="var-val">R$ 0</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Credit Card Bills Summary -->
+                <div id="card-bills-container" class="card-bills-grid" style="margin-top: 24px;">
+                    <!-- Cards will be rendered here by JS -->
+                </div>
+
+                <!-- Scheduled Bills Summary -->
+                <div id="scheduled-bills-dashboard" class="glass-card highlight-card" style="margin-top: 24px; display: none;">
+                    <div class="section-header">
+                        <h3>📅 Contas do Mês</h3>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px;">
+                        <div>
+                            <p style="font-size: 0.75rem; color: var(--text-sec);">Total pendente</p>
+                            <h2 id="scheduled-total" style="font-size: 1.5rem; color: #f59e0b;">R$ 0,00</h2>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="font-size: 0.75rem; color: var(--text-sec);">Pagas</p>
+                            <h3 id="scheduled-paid" style="font-size: 1.2rem; color: #10b981;">R$ 0,00</h3>
+                        </div>
+                    </div>
+                    <div id="scheduled-bills-detail-list" style="margin-top: 16px;"></div>
+                </div>
+                
+                <!-- Financial Health Section (Advanced Metrics) -->
+                <section class="health-section glass-card entrance-anim">
+                    <div class="section-header">
+                        <h3>🏥 Saúde Financeira</h3>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <i class="fa-solid fa-heart-pulse gradient-text"></i>
+                        </div>
+                    </div>
+                    <div class="health-grid">
+                        <div class="health-card">
+                            <p>Taxa de Poupança</p>
+                            <h4 id="saving-rate">0%</h4>
+                            <div class="mini-bar"><div id="saving-bar" class="fill"></div></div>
+                            <div id="saving-insight-container"></div>
+                        </div>
+                        <div class="health-card">
+                            <p>Custo Fixo / Renda</p>
+                            <h4 id="fixed-commitment">0%</h4>
+                            <div class="mini-bar"><div id="fixed-commitment-bar" class="fill warning"></div></div>
+                        </div>
+                        <div class="health-card">
+                            <p>Saldo Projetado</p>
+                            <h4 id="real-projection">R$ 0,00</h4>
+                            <span class="tag" style="font-size: 0.7rem; opacity: 0.8; margin-top: 8px;">Diferença: <b id="projection-diff">R$ 0</b></span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Charts Section - Desktop: 2 columns -->
+                <section class="charts-section">
+                    <div class="charts-grid">
+                        <div class="chart-group">
+                            <h3>Gastos por Categoria</h3>
+                            <div class="chart-container">
+                                <canvas id="category-chart"></canvas>
+                            </div>
+                            <div id="dash-category-insight" style="margin-top: 10px;"></div>
+                        </div>
+                        <div class="chart-group">
+                            <h3>Sazonalidade do Mês (Gastos Diários)</h3>
+                            <div class="chart-container">
+                                <canvas id="daily-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Budget + Owner Row (Desktop: side by side) -->
+                <div class="budget-owner-row">
+                    <!-- Budgeting Section -->
+                    <section class="budget-section glass-card">
+                        <div class="section-header">
+                            <h3>Meu Orçamento (Budget)</h3>
+                        </div>
+                        <div id="budget-total-summary" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <span style="font-size: 0.8rem; color: var(--text-sec);">Orçamento Total</span>
+                            <span id="budget-total-value" style="font-size: 1.1rem; font-weight: 700; color: var(--accent);">R$ 0,00</span>
+                        </div>
+                        <div id="budgets-list" class="budgets-list">
+                            <!-- Progress bars will be injected here -->
+                        </div>
+                    </section>
+
+                    <!-- Owner Breakdown -->
+                    <section class="owner-breakdown glass-card">
+                        <h3>Gastos por Pessoa</h3>
+                        <div class="breakdown-bars">
+                            <div class="bar-container">
+                                <div class="bar-labels">
+                                    <span>Eu</span>
+                                    <span id="spent-me">R$ 0,00</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill me" id="pct-me"></div></div>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-labels">
+                                    <span>Ela</span>
+                                    <span id="spent-her">R$ 0,00</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill her" id="pct-her"></div></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Goals + Transactions (Desktop: full width) -->
+                <div class="desktop-full-width">
+                    <!-- Goals/Objectives Section -->
+                    <section class="goals-section glass-card entrance-anim" style="margin-bottom: 32px;">
+                        <div class="section-header">
+                            <h3>🎯 Nossos Objetivos</h3>
+                            <div id="goals-insight-container"></div>
+                            <button id="add-goal-btn" class="btn-icon"><i class="fa-solid fa-circle-plus"></i></button>
+                        </div>
+                        <div id="goals-list" class="goals-list">
+                            <div class="empty-state">Nenhum objetivo cadastrado.</div>
+                        </div>
+                    </section>
+
+                    <!-- Transactions List -->
+                    <section class="transactions-section glass-card">
+                        <div class="section-header">
+                            <h3>Atividades Recentes</h3>
+                            <button id="view-all-btn" class="btn-text">Ver todas</button>
+                        </div>
+
+                        <div class="list-filters">
+                            <button class="filter-btn active" data-filter="all">Todos</button>
+                            <button class="filter-btn" data-filter="eu">Eu</button>
+                            <button class="filter-btn" data-filter="esposa">Ela</button>
+                            <button class="filter-btn" data-filter="ambos">Ambos</button>
+                        </div>
+                        <div id="transactions-list" class="transactions-list">
+                            <div class="empty-state">Carregando transações...</div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Planning View (Tab 2) -->
+            <div id="planning-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header">
+                    <h2>🗓️ Central de Planejamento</h2>
+                </div>
+                <div id="planning-insight-container" style="margin-bottom: 20px;"></div>
+
+                <!-- Break-Even / Custo de Vida Dashboard -->
+                <div class="glass-card highlight-card mt-4" style="text-align: center; border-color: rgba(168, 85, 247, 0.4);">
+                    <p style="font-size: 0.8rem; color: var(--text-sec); margin-bottom: 4px;">🎯 Custo de Vida Mensal Mínimo</p>
+                    <h2 id="breakeven-amount" style="font-size: 2rem; color: #a855f7;">R$ 0,00</h2>
+                    <p id="breakeven-text" style="font-size: 0.75rem; color: var(--text-sec); margin-top: 8px; line-height: 1.4;">Calculando suas necessidades mensais...</p>
+                </div>
+
+                <div class="glass-card mt-4 highlight-card">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>🏦 Contas / Carteiras</h3>
+                        <button id="add-wallet-btn" class="btn-text">+ Nova Conta</button>
+                    </div>
+                    <div id="wallets-config-list" class="config-list">
+                        <div class="empty-state">Nenhuma conta cadastrada.</div>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>💳 Gerenciar Cartões</h3>
+                        <button id="add-card-btn" class="btn-text">+ Novo Cartão</button>
+                    </div>
+                    <div id="cards-config-list" class="config-list">
+                        <!-- Card list via JS -->
+                        <div class="empty-state">Nenhum cartão cadastrado.</div>
+                    </div>
+                </div>
+
+                <!-- Setup Budgets -->
+                <div class="glass-card mt-4">
+                    <h3>Definir Orçamentos</h3>
+                    <p class="subtitle" style="text-align: left; font-size: 0.8rem; margin-bottom: 12px;">Limite mensal que vocês desejam gastar em cada categoria.</p>
+                    <div id="budget-setup-insight" style="margin-bottom: 20px;"></div>
+                    <div id="budget-config-list" class="config-list">
+                        <!-- Inputs via JS -->
+                    </div>
+                    <button id="save-budgets-btn" class="btn-primary w-full mt-4">Salvar Orçamentos</button>
+                </div>
+
+                <!-- Scheduled Bills -->
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>Contas Programadas</h3>
+                        <button id="add-scheduled-btn" class="btn-text">+ Adicionar</button>
+                    </div>
+                    <p class="subtitle" style="text-align: left; font-size: 0.8rem; margin-bottom: 16px;">Contas fixas recorrentes do mês (Aluguel, Luz, etc.)</p>
+                    <div id="scheduled-bills-list" class="scheduled-list">
+                        <!-- List via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debts View (Tab 3) -->
+            <div id="debts-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <h2>💸 Gerenciar Dívidas</h2>
+                    <button id="add-debt-btn" class="btn-icon" title="Adicionar Dívida"><i class="fa-solid fa-circle-plus"></i></button>
+                </div>
+
+                <!-- Debt Summary Card -->
+                <div class="glass-card highlight-card debt-summary-card entrance-anim" style="margin-bottom: 24px;">
+                    <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 6px;">📊 Visão Geral das Dívidas</p>
+                    <div id="debts-insight-container" style="margin-bottom: 12px; margin-top: 12px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <p style="font-size: 0.75rem; color: var(--text-sec);">Total em aberto</p>
+                            <h2 id="total-debt-remaining" style="font-size: 1.8rem; color: #f43f5e;">R$ 0,00</h2>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="font-size: 0.75rem; color: var(--text-sec);">Parcela mensal total</p>
+                            <h3 id="total-debt-monthly" style="font-size: 1.2rem; color: #f59e0b;">R$ 0,00</h3>
+                        </div>
+                    </div>
+                    <div class="debt-progress-bar" style="margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-sec); margin-bottom: 6px;">
+                            <span>Pago</span>
+                            <span id="debt-pct-label">0%</span>
+                        </div>
+                        <div style="height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden;">
+                            <div id="debt-progress-fill" style="height: 100%; background: linear-gradient(90deg, #10b981, #34d399); width: 0%; border-radius: 4px; transition: width 1s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debt List -->
+                <div id="debts-list" class="debts-list">
+                    <div class="empty-state" style="padding: 40px;">Nenhuma dívida cadastrada. <br>Toque em <b>+</b> para adicionar.</div>
+                </div>
+            </div>
+
+            <!-- Reports View (Tab 4) -->
+            <div id="reports-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <h2>📈 Relatórios</h2>
+                    <div id="reports-insight-container" style="flex: 1; margin: 0 20px;"></div>
+                    <div style="display:flex; gap: 8px;">
+                        <button class="quick-filter-btn active" data-filter="month" onclick="window.app?.reportsController?.applyQuickFilter('month')">Este Mês</button>
+                        <button class="quick-filter-btn" data-filter="lastMonth" onclick="window.app?.reportsController?.applyQuickFilter('lastMonth')">Mês Passado</button>
+                        <button class="quick-filter-btn" data-filter="quarter" onclick="window.app?.reportsController?.applyQuickFilter('quarter')">Trimestre</button>
+                        <button class="quick-filter-btn" data-filter="year" onclick="window.app?.reportsController?.applyQuickFilter('year')">Ano</button>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-bottom: 16px; padding: 16px;">
+                    <div style="display: flex; gap: 12px; align-items:flex-end;">
+                        <div class="input-group" style="margin-bottom:0; flex:1;">
+                            <label style="font-size: 0.75rem;">De</label>
+                            <input type="date" id="report-start-date" style="padding: 8px;">
+                        </div>
+                        <div class="input-group" style="margin-bottom:0; flex:1;">
+                            <label style="font-size: 0.75rem;">Até</label>
+                            <input type="date" id="report-end-date" style="padding: 8px;">
+                        </div>
+                        <button id="generate-report-btn" class="btn-primary" style="padding: 8px 12px;"><i class="fa-solid fa-search"></i></button>
+                        <button id="export-btn" class="btn-secondary" title="Exportar CSV"><i class="fa-solid fa-download"></i></button>
+                    </div>
+                </div>
+
+                <!-- Resumo Financeiro -->
+                <div class="glass-card" style="margin-bottom: 16px; padding: 16px;">
+                    <h3 style="margin-bottom: 12px; font-size: 0.9rem;">📊 Resumo do Período</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
+                        <div>
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Receitas</p>
+                            <h3 id="report-total-in" style="color: var(--income); font-size: 1rem;">R$ 0,00</h3>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Despesas</p>
+                            <h3 id="report-total-out" style="color: var(--expense); font-size: 1rem;">R$ 0,00</h3>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Fixo</p>
+                            <h3 id="report-fixed" style="color: #f59e0b; font-size: 1rem;">R$ 0,00</h3>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Balanço</p>
+                            <h3 id="report-balance-period" style="font-size: 1rem;">R$ 0,00</h3>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--glass-border);">
+                        <div style="text-align: center;">
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Taxa Economia</p>
+                            <h3 id="report-saving-rate" style="font-size: 0.9rem;">0%</h3>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Gasto Fixo</p>
+                            <h3 id="report-fixed-pct" style="font-size: 0.9rem;">0%</h3>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Você</p>
+                            <h3 id="report-spent-me" style="font-size: 0.9rem;">R$ 0,00</h3>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 0.7rem; color: var(--text-sec);">Esposa</p>
+                            <h3 id="report-spent-her" style="font-size: 0.9rem;">R$ 0,00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="glass-card" style="padding: 12px;">
+                        <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Comparativo</h4>
+                        <div style="height: 180px;">
+                            <canvas id="report-compare-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-card" style="padding: 12px;">
+                        <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Por Categoria</h4>
+                        <div style="height: 180px;">
+                            <canvas id="report-category-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evolução -->
+                <div class="glass-card" style="margin-bottom: 16px; padding: 12px;">
+                    <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Evolução ao Longo do Tempo</h4>
+                    <div id="evolution-insight-container" style="margin-bottom: 12px;"></div>
+                    <div style="height: 200px;">
+                        <canvas id="report-evolution-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Detalhamento por Categoria -->
+                <div class="glass-card" style="margin-bottom: 16px; padding: 12px;">
+                    <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Detalhamento por Categoria</h4>
+                    <div id="category-insight-container" style="margin-bottom: 12px;"></div>
+                    <div id="category-breakdown-list"></div>
+                </div>
+
+                <!-- Lista de Transações -->
+                <div class="glass-card" style="padding: 12px;">
+                    <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Transações Recentes</h4>
+                    <div id="report-transactions-list" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div id="add-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>Nova Transação</h3>
+                <button id="close-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="transaction-form">
+                <div class="type-selector">
+                    <input type="radio" id="type-expense" name="trans-type" value="expense" checked>
+                    <label class="type-btn expense" for="type-expense">Despesa</label>
+                    <input type="radio" id="type-income" name="trans-type" value="income">
+                    <label class="type-btn income" for="type-income">Receita</label>
+                </div>
+
+                <div id="link-bill-group" class="input-group" style="margin-bottom: 20px;">
+                    <label>Vincular a uma Conta Fixa (Opcional)</label>
+                    <div style="position: relative;">
+                        <select id="trans-link-bill" class="w-full" style="background: rgba(15,23,42,0.8); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); appearance: none;">
+                            <option value="">Avulso / Nenhuma</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position: absolute; right: 14px; top: 14px; pointer-events: none; color: var(--text-sec); font-size: 0.8rem;"></i>
+                    </div>
+                    <small style="color: var(--text-sec); font-size: 0.72rem; display: block; margin-top: 5px;">Selecione para dar baixa automática na conta do mês.</small>
+                </div>
+
+                <div class="amount-input-group">
+                    <span>R$</span>
+                    <input type="number" id="trans-amount" step="0.01" required placeholder="0,00">
+                </div>
+                
+                <button type="button" id="toggle-split-btn" class="btn-text" style="width: 100%; text-align: right; margin-top: -16px; margin-bottom: 16px; font-size: 0.75rem;"><i class="fa-solid fa-code-branch"></i> Dividir Multi-Categoria</button>
+
+                <div id="split-items-container" class="hidden" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px;">
+                    <div id="split-items-list" style="display:flex; flex-direction: column; gap:10px; margin-bottom: 12px;"></div>
+                    <button type="button" id="add-split-item" class="btn-icon" style="width: 100%; border-radius: 8px;"><i class="fa-solid fa-plus"></i></button>
+                    <div style="text-align:right; margin-top: 8px; font-size:0.8rem;">Restante para distribuir: <b id="split-sum-display" style="color:var(--accent);">R$ 0,00</b></div>
+                </div>
+
+                <!-- Meio de Pagamento -->
+                <div class="input-group">
+                    <label>Meio de Pagamento</label>
+                    <div class="owner-selector" id="payment-method-selector">
+                        <input type="radio" id="pay-pix" name="pay-method" value="pix" checked>
+                        <label for="pay-pix"><i class="fa-solid fa-money-bill-transfer"></i> Pix/Deb</label>
+                        <input type="radio" id="pay-card" name="pay-method" value="card">
+                        <label for="pay-card"><i class="fa-solid fa-credit-card"></i> Cartão</label>
+                        <input type="radio" id="pay-credit" name="pay-method" value="crediario">
+                        <label for="pay-credit"><i class="fa-solid fa-file-invoice-dollar"></i> Crediário</label>
+                    </div>
+                </div>
+
+                <!-- Seleção da Carteira (Se for Pix/Debito) -->
+                <div id="wallet-selection-group" class="input-group">
+                    <label>Conta / Carteira de Saída</label>
+                    <select id="trans-wallet" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                        <!-- Wallets via JS -->
+                    </select>
+                </div>
+
+                <!-- Seleção de Cartão (Se for Cartão) -->
+                <div id="card-selection-group" class="input-group hidden">
+                    <label>Escolher Cartão</label>
+                    <select id="trans-card" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                        <!-- Cards via JS -->
+                    </select>
+                    <div id="card-invoice-info" style="margin-top: 8px; padding: 10px; background: rgba(59,130,246,0.2); border-radius: 8px; font-size: 0.85rem;"></div>
+                </div>
+
+                <!-- Seleção de Dívida -->
+                <div id="debt-selection-group" class="input-group hidden">
+                    <label>Pagar Dívida</label>
+                    <select id="trans-debt" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                        <option value="">Selecione uma dívida (opcional)</option>
+                    </select>
+                </div>
+
+                <!-- Parcelamento -->
+                <div id="installment-group" class="input-group hidden">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <label style="margin: 0;">Número de Parcelas</label>
+                        <span style="font-size: 0.75rem; color: var(--accent);">Cada mês: <b id="installment-calc">R$ 0,00</b></span>
+                    </div>
+                    <input type="number" id="trans-installments" value="1" min="1" max="60">
+                </div>
+
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <input type="text" id="trans-desc" required placeholder="Ex: Conta de Luz">
+                </div>
+
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <div class="category-grid">
+                        <input type="radio" name="trans-category" id="cat-mercado" value="Mercado" checked hidden>
+                        <label for="cat-mercado" class="cat-card"><i class="fa-solid fa-cart-shopping"></i><span>Mercado</span></label>
+                        <input type="radio" name="trans-category" id="cat-alimentacao" value="Alimentação" hidden>
+                        <label for="cat-alimentacao" class="cat-card"><i class="fa-solid fa-utensils"></i><span>Alimentação</span></label>
+                        <input type="radio" name="trans-category" id="cat-transporte" value="Transporte" hidden>
+                        <label for="cat-transporte" class="cat-card"><i class="fa-solid fa-car"></i><span>Transporte</span></label>
+                        <input type="radio" name="trans-category" id="cat-casa" value="Casa" hidden>
+                        <label for="cat-casa" class="cat-card"><i class="fa-solid fa-house"></i><span>Casa</span></label>
+                        <input type="radio" name="trans-category" id="cat-lazer" value="Lazer" hidden>
+                        <label for="cat-lazer" class="cat-card"><i class="fa-solid fa-gamepad"></i><span>Lazer</span></label>
+                        
+                        <input type="radio" name="trans-category" id="cat-saude" value="Saúde" hidden>
+                        <label for="cat-saude" class="cat-card"><i class="fa-solid fa-house-medical"></i><span>Saúde</span></label>
+                        <input type="radio" name="trans-category" id="cat-pets" value="Pets" hidden>
+                        <label for="cat-pets" class="cat-card"><i class="fa-solid fa-paw"></i><span>Pets</span></label>
+                        <input type="radio" name="trans-category" id="cat-compras" value="Compras" hidden>
+                        <label for="cat-compras" class="cat-card"><i class="fa-solid fa-bag-shopping"></i><span>Compras</span></label>
+                        <input type="radio" name="trans-category" id="cat-educacao" value="Educação" hidden>
+                        <label for="cat-educacao" class="cat-card"><i class="fa-solid fa-book"></i><span>Educação</span></label>
+                        <input type="radio" name="trans-category" id="cat-viagem" value="Viagem" hidden>
+                        <label for="cat-viagem" class="cat-card"><i class="fa-solid fa-plane"></i><span>Viagem</span></label>
+                        <input type="radio" name="trans-category" id="cat-presentes" value="Presentes" hidden>
+                        <label for="cat-presentes" class="cat-card"><i class="fa-solid fa-gift"></i><span>Presentes</span></label>
+                        <input type="radio" name="trans-category" id="cat-investimentos" value="Investimentos" hidden>
+                        <label for="cat-investimentos" class="cat-card"><i class="fa-solid fa-chart-line"></i><span>Investimentos</span></label>
+                        <input type="radio" name="trans-category" id="cat-assinaturas" value="Assinaturas" hidden>
+                        <label for="cat-assinaturas" class="cat-card"><i class="fa-solid fa-tv"></i><span>Assinaturas</span></label>
+                        
+                        <input type="radio" name="trans-category" id="cat-outros" value="Outros" hidden>
+                        <label for="cat-outros" class="cat-card"><i class="fa-solid fa-ellipsis"></i><span>Outros</span></label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>De quem é esse valor?</label>
+                    <div class="owner-selector">
+                        <input type="radio" id="owner-me" name="trans-owner" value="eu" checked>
+                        <label for="owner-me">Eu</label>
+                        
+                        <input type="radio" id="owner-her" name="trans-owner" value="esposa">
+                        <label for="owner-her">Ela</label>
+                        
+                        <input type="radio" id="owner-both" name="trans-owner" value="ambos">
+                        <label for="owner-both">Ambos</label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Data</label>
+                    <input type="date" id="trans-date" required>
+
+                    <label class="sub-toggle">
+                        <input type="checkbox" id="trans-is-sub">
+                        <span>É uma assinatura fixa mensal?</span>
+                    </label>
+                </div>
+
+                <div id="recurrence-group" class="input-group hidden">
+                    <label>Repetir mensamente (qtd. meses)</label>
+                    <input type="number" id="trans-recurrence-months" value="1" min="1" max="120" placeholder="Ex: 12">
+                </div>
+
+                <button type="submit" class="btn-primary w-full mt-4" id="save-trans-btn">Adicionar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Scheduled Bill Modal -->
+    <div id="scheduled-bill-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>📅 Nova Conta Programada</h3>
+                <button id="close-scheduled-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="scheduled-bill-form">
+                <div class="input-group">
+                    <label>Nome da Conta (Ex: IPTU, Gremio)</label>
+                    <input type="text" id="sched-name" required placeholder="Ex: IPTU">
+                </div>
+                <div class="input-group" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>Valor Mensal (R$)</label>
+                        <input type="number" id="sched-amount" step="0.01" required placeholder="0,00">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Dia do Vencimento</label>
+                        <input type="number" id="sched-day" min="1" max="31" required placeholder="Ex: 5">
+                    </div>
+                </div>
+                <!-- Tipo de Recorrência -->
+                <div class="input-group" style="margin-bottom: 16px;">
+                    <label>Tipo de Recorrência</label>
+                    <div class="owner-selector" id="sched-recurrence-selector">
+                        <input type="radio" id="sched-rec-monthly" name="sched-recurrence" value="monthly" checked>
+                        <label for="sched-rec-monthly">🔄 Mensal (sem fim)</label>
+                        <input type="radio" id="sched-rec-limited" name="sched-recurrence" value="limited">
+                        <label for="sched-rec-limited">📅 Limitado (nº vezes / datas)</label>
+                    </div>
+                </div>
+
+                <!-- Campos de recorrência limitada (escondidos quando Mensal está ativo) -->
+                <div id="sched-limited-fields" class="hidden" style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>Quantas vezes?</label>
+                        <input type="number" id="sched-count" min="1" placeholder="Em branco = Fixa">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Data de Início</label>
+                        <input type="date" id="sched-start-date">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Data de Término</label>
+                        <input type="date" id="sched-end-date">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="sched-category" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); width: 100%;">
+                            <option value="Casa">Casa</option>
+                            <option value="Mercado">Mercado</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Pets">Pets</option>
+                            <option value="Educação">Educação</option>
+                            <option value="Assinaturas">Assinaturas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                </div>
+
+                <div class="input-group">
+                    <label>De onde descontar automaticamente?</label>
+                    <div class="owner-selector" style="margin-bottom: 8px;">
+                        <input type="radio" id="sched-pay-pix" name="sched-pay-method" value="pix" checked>
+                        <label for="sched-pay-pix">Conta/Pix</label>
+                        <input type="radio" id="sched-pay-card" name="sched-pay-method" value="card">
+                        <label for="sched-pay-card">Cartão</label>
+                    </div>
+                </div>
+
+                <div id="sched-wallet-group" class="input-group">
+                    <label>Selecione a Conta</label>
+                    <select id="sched-wallet" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);"></select>
+                </div>
+
+                <div id="sched-card-group" class="input-group hidden">
+                    <label>Selecione o Cartão</label>
+                    <select id="sched-card" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);"></select>
+                </div>
+                
+                <div class="input-group">
+                    <label>De quem é esse valor?</label>
+                    <div class="owner-selector">
+                        <input type="radio" id="sched-owner-me" name="sched-owner" value="eu" checked>
+                        <label for="sched-owner-me">Eu</label>
+                        <input type="radio" id="sched-owner-her" name="sched-owner" value="esposa">
+                        <label for="sched-owner-her">Ela</label>
+                        <input type="radio" id="sched-owner-both" name="sched-owner" value="ambos">
+                        <label for="sched-owner-both">Ambos</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Conta Programada</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Goal Modal -->
+    <div id="goal-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>Novo Objetivo</h3>
+                <button id="close-goal-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="goal-form">
+                <div class="input-group">
+                    <label>Nome do Objetivo</label>
+                    <input type="text" id="goal-name" required placeholder="Ex: Viagem de Férias">
+                </div>
+                <div class="input-group">
+                    <label>Valor Meta (R$)</label>
+                    <input type="number" id="goal-target" step="0.01" required placeholder="0,00">
+                </div>
+                <div class="input-group">
+                    <label>Valor Já Guardado (R$)</label>
+                    <input type="number" id="goal-current" step="0.01" value="0" placeholder="0,00">
+                </div>
+                <div class="input-group">
+                    <label>Data Alvo (Opcional)</label>
+                    <input type="date" id="goal-deadline">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Objetivo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View All Transactions Modal -->
+    <div id="view-all-modal" class="modal hidden">
+        <div class="modal-content glass-card list-modal">
+            <div class="modal-header">
+                <h3>Todas as Atividades</h3>
+                <button id="close-view-all" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="all-transactions-list" class="transactions-list scrollable">
+                <!-- List via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Card Modal -->
+    <div id="card-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>💳 Novo Cartão</h3>
+                <button id="close-card-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="card-form">
+                <div class="input-group">
+                    <label>Nome do Cartão</label>
+                    <input type="text" id="card-name" required placeholder="Ex: Nubank, Inter, Itaú...">
+                </div>
+                <div class="input-group">
+                    <label>Dia de Fechamento</label>
+                    <input type="number" id="card-closing" required min="1" max="31" placeholder="Ex: 15">
+                </div>
+                <div class="input-group">
+                    <label>Dia de Vencimento</label>
+                    <input type="number" id="card-due" required min="1" max="31" placeholder="Ex: 22">
+                </div>
+                <div class="input-group">
+                    <label>Limite do Cartão (R$)</label>
+                    <input type="number" id="card-limit" step="0.01" placeholder="Ex: 5000,00">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Cartão</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Wallet Modal -->
+    <div id="wallet-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>🏦 Nova Conta/Carteira</h3>
+                <button id="close-wallet-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="wallet-form">
+                <div class="input-group">
+                    <label>Nome da Conta</label>
+                    <input type="text" id="wallet-name" required placeholder="Ex: Nubank, Caixa, Dinheiro...">
+                </div>
+                <div class="input-group">
+                    <label>Saldo Inicial (R$)</label>
+                    <input type="number" id="wallet-balance" step="0.01" value="0" placeholder="0,00">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Conta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reconcile Card Modal -->
+    <div id="reconcile-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>💳 Pagar &amp; Conciliar</h3>
+                <button id="close-reconcile-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- Input state -->
+            <div id="reconcile-body">
+                <p class="subtitle" style="text-align:left; margin-bottom: 16px;">Informe o valor <b>real</b> que foi debitado na fatura.</p>
+                <div class="input-group">
+                    <label id="reconcile-label">Valor Real Pago (R$)</label>
+                    <div class="amount-input-group">
+                        <span>R$</span>
+                        <input type="number" id="reconcile-amount" step="0.01" placeholder="0,00">
+                    </div>
+                </div>
+                <p style="font-size:0.8rem; color: var(--text-sec); margin-bottom: 20px;">
+                    Estimado pelo app: <b id="reconcile-estimated" style="color:var(--text-prime);">R$ 0,00</b>
+                </p>
+                <button id="reconcile-confirm-btn" class="btn-primary w-full">Confirmar Pagamento</button>
+            </div>
+            <!-- Result state -->
+            <div id="reconcile-result" class="hidden" style="text-align:center; padding: 8px 0;">
+                <div id="reconcile-result-icon" style="font-size: 3rem; margin-bottom: 16px;"></div>
+                <h3 id="reconcile-result-title" style="margin-bottom: 8px;"></h3>
+                <p id="reconcile-result-msg" style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 24px;"></p>
+                <button id="reconcile-close-result" class="btn-primary w-full">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Debt Modal -->
+    <div id="debt-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>💸 Nova Dívida</h3>
+                <button id="close-debt-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="debt-form">
+                <div class="input-group">
+                    <label>Nome da Dívida</label>
+                    <input type="text" id="debt-name" required placeholder="Ex: Empréstimo Pessoal, Financiamento...">
+                </div>
+                <div class="input-group">
+                    <label>Tipo</label>
+                    <div class="owner-selector" id="debt-type-selector">
+                        <input type="radio" id="dtype-loan" name="debt-type" value="Empréstimo" checked>
+                        <label for="dtype-loan">💰 Empréstimo</label>
+                        <input type="radio" id="dtype-financing" name="debt-type" value="Financiamento">
+                        <label for="dtype-financing">🏠 Financiamento</label>
+                        <input type="radio" id="dtype-card" name="debt-type" value="Cartão">
+                        <label for="dtype-card">💳 Cartão</label>
+                        <input type="radio" id="dtype-other" name="debt-type" value="Outros">
+                        <label for="dtype-other">📦 Outros</label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Valor Total da Dívida (R$)</label>
+                    <div class="amount-input-group">
+                        <span>R$</span>
+                        <input type="number" id="debt-total" step="0.01" required placeholder="0,00">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Valor Já Pago (R$)</label>
+                    <input type="number" id="debt-paid" step="0.01" value="0" placeholder="0,00">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="input-group">
+                        <label>Nº de Parcelas</label>
+                        <input type="number" id="debt-installments" min="1" max="480" value="12" placeholder="Ex: 36">
+                    </div>
+                    <div class="input-group">
+                        <label>Dia do Vencimento</label>
+                        <input type="number" id="debt-due-day" min="1" max="31" placeholder="Ex: 10">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Data de Início</label>
+                    <input type="date" id="debt-start-date">
+                </div>
+                <div class="input-group">
+                    <label>Credor (quem você deve)</label>
+                    <input type="text" id="debt-creditor" placeholder="Ex: Caixa Econômica, Nubank, Pedro...">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-4" id="save-debt-btn">Salvar Dívida</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="src/App.js"></script>
+    <script type="module" src="tests/runner.js"></script>
+</body>
+</html>
