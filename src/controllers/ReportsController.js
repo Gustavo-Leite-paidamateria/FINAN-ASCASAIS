@@ -117,6 +117,7 @@ class ReportsController {
         this.renderCompareChart(summary);
         this.renderCategoryChart(transactions);
         await this.renderEvolutionChart();
+        this.renderPayeeReport(summary.byPayee);
         this.renderTransactionsList(transactions);
     }
 
@@ -126,6 +127,7 @@ class ReportsController {
         let fixed = 0, variable = 0;
         const byCategory = {};
         const byMonth = {};
+        const byPayee = {};
 
         transactions.forEach(t => {
             const v = parseFloat(t.valor);
@@ -153,9 +155,14 @@ class ReportsController {
             if (!byMonth[monthKey]) byMonth[monthKey] = { income: 0, expense: 0 };
             if (t.tipo === 'Receita') byMonth[monthKey].income += v;
             else byMonth[monthKey].expense += v;
+
+            if (t.payee_id) {
+                if (!byPayee[t.payee_id]) byPayee[t.payee_id] = 0;
+                if (t.tipo === 'Despesa') byPayee[t.payee_id] += v;
+            }
         });
 
-        return { income, expense, fixed, variable, me, her, byCategory, byMonth };
+        return { income, expense, fixed, variable, me, her, byCategory, byMonth, byPayee };
     }
 
     parseMeta(observacoes) {
@@ -310,6 +317,43 @@ class ReportsController {
         }
     }
 
+    renderPayeeReport(byPayee) {
+        const container = document.getElementById('payee-report-list');
+        if (!container) return;
+
+        const config = window.app.config;
+        const sorted = Object.entries(byPayee || {})
+            .sort((a, b) => b[1] - a[1]);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state">Nenhuma transação com favorecido no período.</div>';
+            return;
+        }
+
+        const max = sorted[0][1];
+
+        container.innerHTML = sorted.map(([payeeId, total]) => {
+            const payee = config.payees.find(p => p.id === payeeId);
+            const name = payee ? payee.name : 'Desconhecido';
+            const pct = (total / max) * 100;
+
+            return `
+                <div class="config-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="config-info">
+                            <strong>${name}</strong>
+                            <span class="subtitle">${payee?.defaultCategory || ''}</span>
+                        </div>
+                        <strong style="color: var(--expense);">${formatCurrency(total)}</strong>
+                    </div>
+                    <div class="mini-bar" style="height: 4px; background: rgba(255,255,255,0.05);">
+                        <div class="fill" style="width: ${pct}%; background: var(--expense); height: 100%;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     async renderEvolutionChart() {
         const ctx = document.getElementById('report-evolution-chart');
         if (!ctx) return;
@@ -462,6 +506,91 @@ class ReportsController {
         } catch (e) {
             console.error("Export error", e);
             notificationService.error('Erro', 'Falha ao exportar');
+        }
+    }
+
+    async exportExcel() {
+        if (typeof XLSX === 'undefined') {
+            notificationService.error('Erro', 'Biblioteca Excel não carregada. Recarregue a página.');
+            return;
+        }
+
+        const sDate = document.getElementById('report-start-date')?.value;
+        const eDate = document.getElementById('report-end-date')?.value;
+
+        try {
+            let start = null, end = null;
+            if (sDate && eDate) {
+                start = new Date(sDate).toISOString();
+                end = new Date(eDate + 'T23:59:59').toISOString();
+            }
+
+            const data = await supabaseService.fetchTransactionsRaw(start, end);
+            if (!data || data.length === 0) {
+                notificationService.warning('Aviso', 'Nenhum dado para exportar nesse período.');
+                return;
+            }
+
+            const rows = data.map(t => {
+                let meta = { owner: t.observacoes };
+                if (t.observacoes && t.observacoes.startsWith('{')) {
+                    try { meta = JSON.parse(t.observacoes); } catch (e) {}
+                }
+                return {
+                    Data: t.data ? t.data.split('T')[0] : '',
+                    Descrição: t.descricao || '',
+                    Categoria: t.categoria || '',
+                    Valor: parseFloat(t.valor) || 0,
+                    Tipo: t.tipo || '',
+                    Dono: meta.owner || 'ambos',
+                    Forma: t.forma_pagamento || ''
+                };
+            });
+
+            const wb = XLSX.utils.book_new();
+
+            // Aba 1: Transações
+            const wsT = XLSX.utils.json_to_sheet(rows);
+            const rangeT = XLSX.utils.decode_range(wsT['!ref']);
+            for (let R = 1; R <= rangeT.e.r; R++) {
+                const valCell = wsT[XLSX.utils.encode_cell({ r: R, c: 3 })];
+                if (valCell) valCell.z = '#,##0.00';
+            }
+            wsT['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
+            XLSX.utils.book_append_sheet(wb, wsT, 'Transações');
+
+            // Aba 2: Por Categoria
+            const catMap = {};
+            rows.forEach(r => {
+                if (!catMap[r.Categoria]) catMap[r.Categoria] = { Receitas: 0, Despesas: 0 };
+                if (r.Tipo === 'Receita') catMap[r.Categoria].Receitas += r.Valor;
+                else catMap[r.Categoria].Despesas += r.Valor;
+            });
+            const catRows = Object.entries(catMap)
+                .map(([cat, v]) => ({ Categoria: cat, Receitas: v.Receitas, Despesas: v.Despesas, Saldo: v.Receitas - v.Despesas }))
+                .sort((a, b) => b.Despesas - a.Despesas);
+            const wsCat = XLSX.utils.json_to_sheet(catRows);
+            wsCat['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, wsCat, 'Por Categoria');
+
+            // Aba 3: Resumo
+            const totalReceita = rows.filter(r => r.Tipo === 'Receita').reduce((a, r) => a + r.Valor, 0);
+            const totalDespesa = rows.filter(r => r.Tipo === 'Despesa').reduce((a, r) => a + r.Valor, 0);
+            const wsRes = XLSX.utils.json_to_sheet([
+                { Item: 'Período', Valor: `${sDate || 'início'} a ${eDate || 'hoje'}` },
+                { Item: 'Total de Lançamentos', Valor: rows.length },
+                { Item: 'Total de Receitas', Valor: totalReceita },
+                { Item: 'Total de Despesas', Valor: totalDespesa },
+                { Item: 'Saldo do Período', Valor: totalReceita - totalDespesa }
+            ]);
+            wsRes['!cols'] = [{ wch: 22 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, wsRes, 'Resumo');
+
+            XLSX.writeFile(wb, `Financas_${sDate || 'completo'}_${eDate || 'hoje'}.xlsx`);
+            notificationService.success('Sucesso', 'Excel exportado com sucesso!');
+        } catch (e) {
+            console.error('Export Excel error', e);
+            notificationService.error('Erro', 'Falha ao exportar Excel');
         }
     }
 

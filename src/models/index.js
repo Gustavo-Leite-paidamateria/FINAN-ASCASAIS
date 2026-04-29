@@ -75,6 +75,9 @@ export class Transaction {
         this.card_id = data.card_id || null;
         this.wallet_id = data.wallet_id || null;
         this.is_subscription = data.is_subscription || false;
+        this.payee_id = data.payee_id || null;
+        this.workspace_id = data.workspace_id || null;
+        this.profile_id = data.profile_id || null;
     }
 
     static parseFromDb(raw) {
@@ -87,7 +90,8 @@ export class Transaction {
             owner: meta.owner || raw.owner || 'ambos',
             pay_method: raw.forma_pagamento || raw.pay_method,
             card_id: meta.cartao_id || raw.cartao_id || raw.card_id,
-            wallet_id: meta.conta_id || raw.conta_id || raw.wallet_id
+            wallet_id: meta.conta_id || raw.conta_id || raw.wallet_id,
+            payee_id: raw.payee_id || meta.payee_id || null
         });
     }
 
@@ -95,7 +99,8 @@ export class Transaction {
         const meta = {
             owner: this.owner,
             cartao_id: this.card_id,
-            conta_id: this.wallet_id
+            conta_id: this.wallet_id,
+            payee_id: this.payee_id
         };
         return {
             tipo: this.tipo,
@@ -106,8 +111,21 @@ export class Transaction {
             forma_pagamento: this.forma_pagamento,
             status: this.status,
             observacoes: JSON.stringify(meta),
-            referencia: this.referencia
+            referencia: this.referencia,
+            payee_id: this.payee_id,
+            workspace_id: this.workspace_id,
+            profile_id: this.profile_id
         };
+    }
+}
+
+export class Payee {
+    constructor(data = {}) {
+        this.id = data.id || 'p_' + Date.now() + Math.random().toString(36).substr(2, 5);
+        this.name = data.name || '';
+        this.document = data.document || '';
+        this.defaultCategory = data.defaultCategory || 'Outros';
+        this.observations = data.observations || '';
     }
 }
 
@@ -221,11 +239,20 @@ export class Goal {
     }
 }
 
+export const WALLET_TYPES = {
+    'conta_corrente': { label: 'Conta Corrente', icon: '🏦' },
+    'poupanca': { label: 'Poupança', icon: '💰' },
+    'investimento': { label: 'Investimento', icon: '📈' },
+    'dinheiro': { label: 'Dinheiro', icon: '💵' },
+    'outro': { label: 'Outro', icon: '🗂️' }
+};
+
 export class Wallet {
     constructor(data = {}) {
         this.id = data.id || 'w_' + Date.now();
         this.name = data.name || 'Conta Principal';
         this.initialBalance = parseFloat(data.initialBalance) || 0;
+        this.type = data.type || 'conta_corrente';
     }
 
     getBalance(transactions) {
@@ -422,12 +449,17 @@ export class UserConfig {
         this.cards = [];
         this.installments = [];
         this.wallets = [];
+        this.payees = [];
+        this.managedProfiles = [];
+        this.userData = {};
+        this.workspace_id = null;
+        this.simulations = [];
     }
 
     static fromJSON(json) {
         const config = new UserConfig();
         if (!json) return config;
-        
+
         config.budgets = Budget.normalizeBudgets(json.budgets);
         config.scheduledBills = (json.scheduledBills || []).map(b => new ScheduledBill(b));
         config.goals = (json.goals || []).map(g => new Goal(g));
@@ -435,7 +467,12 @@ export class UserConfig {
         config.cards = (json.cards || []).map(c => new Card(c));
         config.installments = (json.installments || []).map(i => new Installment(i));
         config.wallets = (json.wallets || []).map(w => new Wallet(w));
-        
+        config.payees = (json.payees || []).map(p => new Payee(p));
+        config.managedProfiles = (json.managedProfiles || []).map(p => new ManagedProfile(p));
+        config.userData = json.userData || {};
+        config.workspace_id = json.workspace_id || null;
+        config.simulations = (json.simulations || []).map(s => new SimulationEvent(s));
+
         return config;
     }
 
@@ -447,7 +484,35 @@ export class UserConfig {
             debts: this.debts,
             cards: this.cards,
             installments: this.installments,
-            wallets: this.wallets
+            wallets: this.wallets,
+            payees: this.payees,
+            managedProfiles: this.managedProfiles,
+            userData: this.userData,
+            workspace_id: this.workspace_id,
+            simulations: this.simulations
         };
+    }
+}
+
+export class SimulationEvent {
+    constructor(data = {}) {
+        this.id = data.id || 'sim_' + Math.random().toString(36).substr(2, 9);
+        this.nome = data.nome || '';
+        this.tipo = data.tipo || 'despesa'; // 'despesa', 'receita', 'financiamento'
+        this.valor = parseFloat(data.valor) || 0;
+        this.data_inicio = data.data_inicio || new Date().toISOString().split('T')[0];
+        this.parcelas = parseInt(data.parcelas) || 1;
+        this.ativa = data.ativa !== undefined ? data.ativa : true;
+    }
+}
+
+export class ManagedProfile {
+    constructor(data = {}) {
+        this.id = data.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'p_' + Date.now());
+        this.workspace_id = data.workspace_id || null;
+        this.name = data.name || '';
+        this.avatar_url = data.avatar_url || null;
+        this.color = data.color || '#3b82f6';
+        this.created_at = data.created_at || new Date().toISOString();
     }
 }

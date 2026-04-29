@@ -7,6 +7,8 @@ class SupabaseService {
     constructor() {
         this._client = null;
         this._initialized = false;
+        this.currentWorkspaceId = null;
+        this.currentProfileId = null; // null = Casal (padrão)
     }
 
     get client() {
@@ -58,6 +60,7 @@ class SupabaseService {
         const { data, error } = await this.client
             .from('financeiro')
             .select('*')
+            .eq('workspace_id', this.currentWorkspaceId)
             .gte('data', startDate.toISOString())
             .lte('data', endDate.toISOString())
             .order('data', { ascending: false });
@@ -68,8 +71,12 @@ class SupabaseService {
 
     async fetchAllTransactions(startDate = null, endDate = null) {
         this.init();
-        let query = this.client.from('financeiro').select('*').order('data', { ascending: false });
+        let query = this.client.from('financeiro').select('*').eq('workspace_id', this.currentWorkspaceId).order('data', { ascending: false });
         
+        if (this.currentProfileId) {
+            query = query.eq('profile_id', this.currentProfileId);
+        }
+
         if (startDate) query = query.gte('data', startDate.toISOString());
         if (endDate) query = query.lte('data', endDate.toISOString());
 
@@ -81,9 +88,12 @@ class SupabaseService {
     async insertTransaction(transaction) {
         this.init();
         const items = Array.isArray(transaction) ? transaction : [transaction];
-        const records = items.map(item =>
-            item instanceof Transaction ? item.toDbRecord() : item
-        );
+        const records = items.map(item => {
+            const record = item instanceof Transaction ? item.toDbRecord() : item;
+            record.workspace_id = this.currentWorkspaceId;
+            record.profile_id = this.currentProfileId;
+            return record;
+        });
         
         const { error } = await this.client.from('financeiro').insert(records);
         if (error) throw error;
@@ -135,11 +145,17 @@ class SupabaseService {
         const { data, error } = await this.client
             .from('configuracoes')
             .select('dados')
-            .eq('id', session.user.id)
+            .eq('workspace_id', this.currentWorkspaceId)
             .single();
         
         if (error && error.code !== 'PGRST116') throw error;
         return data?.dados ? UserConfig.fromJSON(data.dados) : null;
+    }
+
+    async updatePassword(newPassword) {
+        this.init();
+        const { error } = await this.client.auth.updateUser({ password: newPassword });
+        if (error) throw error;
     }
 
     async saveConfig(config) {
@@ -151,10 +167,33 @@ class SupabaseService {
         
         const { error } = await this.client
             .from('configuracoes')
-            .upsert({ id: session.user.id, dados: data }, { onConflict: 'id' });
+            .upsert({ 
+                workspace_id: this.currentWorkspaceId, 
+                dados: data,
+                id: session.user.id // Keep id for legacy/primary key if needed
+            }, { onConflict: 'workspace_id' });
         
         if (error) console.warn("Supabase Sync Error:", error);
         return !error;
+    }
+
+    async getWorkspaces() {
+        this.init();
+        const { data, error } = await this.client
+            .from('workspace_members')
+            .select('workspace_id, role, workspaces(name, owner_id)');
+        if (error) throw error;
+        return data;
+    }
+
+    async fetchManagedProfiles() {
+        this.init();
+        const { data, error } = await this.client
+            .from('managed_profiles')
+            .select('*')
+            .eq('workspace_id', this.currentWorkspaceId);
+        if (error) throw error;
+        return data;
     }
 }
 

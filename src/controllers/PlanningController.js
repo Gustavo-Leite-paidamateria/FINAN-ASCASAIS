@@ -1,4 +1,4 @@
-import { ScheduledBill, Card, Wallet, Budget, Installment } from '../models/index.js';
+import { ScheduledBill, Card, Wallet, Budget, Installment, WALLET_TYPES } from '../models/index.js';
 import { supabaseService, storageService, notificationService } from '../services/index.js';
 import { formatCurrency, getMonthDateRange, SpiritualMentor } from '../utils/index.js';
 
@@ -194,11 +194,12 @@ class PlanningController {
         } else {
             container.innerHTML = config.wallets.map(w => {
                 const currentBalance = transactions.length > 0 ? w.getBalance(transactions) : w.initialBalance;
+                const wtype = WALLET_TYPES[w.type] || WALLET_TYPES['conta_corrente'];
                 return `
                 <div class="card-item-config">
                     <div>
-                        <span class="cat-name">🏦 ${w.name}</span>
-                        <span class="card-meta">Saldo: ${formatCurrency(currentBalance)}</span>
+                        <span class="cat-name">${wtype.icon} ${w.name}</span>
+                        <span class="card-meta">${wtype.label} · Saldo: ${formatCurrency(currentBalance)}</span>
                     </div>
                     ${w.id !== 'w_default' ? `
                         <button onclick="window.app.deleteWallet('${w.id}')" class="btn-mini-icon danger">
@@ -227,9 +228,11 @@ class PlanningController {
     async addWallet(config) {
         const name = document.getElementById('wallet-name')?.value?.trim();
         const bal = parseFloat(document.getElementById('wallet-balance')?.value) || 0;
+        const typeEl = document.querySelector('input[name="wallet-type"]:checked');
+        const type = typeEl ? typeEl.value : 'conta_corrente';
 
         if (name) {
-            config.wallets.push(new Wallet({ name, initialBalance: bal }));
+            config.wallets.push(new Wallet({ name, initialBalance: bal, type }));
             storageService.saveConfig(config);
             await supabaseService.saveConfig(config);
             this.renderWallets(config, []);

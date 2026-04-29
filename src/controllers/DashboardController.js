@@ -11,6 +11,7 @@ class DashboardController {
             daily: null
         };
         this.filter = 'all';
+        this.payeeFilter = 'all';
     }
 
     async loadData(config = null) {
@@ -31,6 +32,7 @@ class DashboardController {
         const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
         
         let processedAny = false;
+        const recordsToInsert = [];
 
         for (const bill of config.scheduledBills) {
             if (bill.paidMonths && bill.paidMonths.includes(yearMonth)) continue;
@@ -47,7 +49,7 @@ class DashboardController {
                 const tDate = new Date(today.getFullYear(), today.getMonth(), targetDay);
                 tDate.setHours(12);
 
-                const record = {
+                recordsToInsert.push({
                     tipo: 'Despesa',
                     valor: bill.amount,
                     descricao: bill.name,
@@ -61,22 +63,32 @@ class DashboardController {
                         conta_id: bill.walletId || null
                     }),
                     referencia: 'conta_programada'
-                };
+                });
 
-                try {
-                    await supabaseService.insertTransaction(record);
-                    if (!bill.paidMonths) bill.paidMonths = [];
-                    bill.paidMonths.push(yearMonth);
-                    processedAny = true;
-                } catch (e) {
-                    console.error('Error processing bill:', e);
+                if (!bill.paidMonths) bill.paidMonths = [];
+                bill.paidMonths.push(yearMonth);
+                
+                // Se for dívida, atualizar o saldo pago
+                if (bill.name.startsWith('[Dívida] ')) {
+                    const debtName = bill.name.replace('[Dívida] ', '');
+                    const debt = config.debts?.find(d => d.name === debtName);
+                    if (debt) {
+                        debt.paid = (debt.paid || 0) + bill.amount;
+                    }
                 }
+
+                processedAny = true;
             }
         }
 
         if (processedAny) {
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
+            try {
+                await supabaseService.insertTransaction(recordsToInsert);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+            } catch (e) {
+                console.error('Error batch processing bills:', e);
+            }
         }
 
         return processedAny;
@@ -89,6 +101,11 @@ class DashboardController {
 
     setFilter(filter) {
         this.filter = filter;
+        this.renderTransactions();
+    }
+
+    setPayeeFilter(payeeId) {
+        this.payeeFilter = payeeId;
         this.renderTransactions();
     }
 
@@ -127,6 +144,7 @@ class DashboardController {
             }
 
             const allTransactions = await supabaseService.fetchAllTransactions();
+            this.allTransactions = allTransactions; // Cache for other calculations
             
             let totalWalletInitial = 0;
             if (config.wallets && config.wallets.length > 0) {
@@ -193,6 +211,10 @@ class DashboardController {
         
         this.updateElement('balance', formatCurrency(metrics.income - metrics.expense));
         this.updateElement('total-balance', formatCurrency(globalBalance));
+        
+        // Render wallet breakdown
+        this.renderWalletBreakdown(config);
+
         this.updateElement('total-income', formatCurrency(metrics.income));
         this.updateElement('total-expense', formatCurrency(metrics.expense));
         this.updateElement('stat-projection', formatCurrency(projections.statProjection));
@@ -231,6 +253,47 @@ class DashboardController {
         }
 
         this.renderInsights(config, metrics, projections);
+    }
+
+    }
+
+    async renderWalletBreakdown(config) {
+        const container = document.getElementById('wallet-type-breakdown');
+        if (!container) return;
+
+        const totals = {};
+        for (const wallet of config.wallets) {
+            const type = wallet.type || 'conta_corrente';
+            if (!totals[type]) totals[type] = 0;
+            const balance = await this.calculateWalletBalance(wallet.id, wallet.initialBalance);
+            totals[type] += balance;
+        }
+
+        const types = {
+            'conta_corrente': { label: '💳 Contas', color: '#3b82f6' },
+            'poupanca': { label: '💰 Poupança', color: '#10b981' },
+            'investimento': { label: '📈 Investimentos', color: '#a855f7' },
+            'dinheiro': { label: '💵 Dinheiro', color: '#f59e0b' },
+            'outro': { label: '🗂️ Outros', color: '#94a3b8' }
+        };
+
+        container.innerHTML = Object.entries(totals)
+            .filter(([_, val]) => Math.abs(val) > 0.01)
+            .map(([type, total]) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; padding: 4px 0;">
+                    <span style="color: var(--text-sec);">${types[type]?.label || type}</span>
+                    <span style="font-weight: 600; color: ${total >= 0 ? 'white' : 'var(--expense)'};">${formatCurrency(total)}</span>
+                </div>
+            `).join('');
+    }
+
+    async calculateWalletBalance(walletId, initialBalance) {
+        const transactions = (this.allTransactions || []).filter(t => {
+            const meta = this.parseMeta(t.observacoes);
+            return meta.conta_id === walletId;
+        });
+        const net = transactions.reduce((sum, t) => t.tipo === 'Receita' ? sum + parseFloat(t.valor) : sum - parseFloat(t.valor), 0);
+        return initialBalance + net;
     }
 
     renderInsights(config, metrics, projections) {
@@ -411,9 +474,13 @@ class DashboardController {
     }
 
     renderTransactions() {
-        const filtered = this.filter === 'all' 
+        let filtered = this.filter === 'all' 
             ? this.transactions 
             : this.transactions.filter(t => t.owner === this.filter);
+
+        if (this.payeeFilter !== 'all') {
+            filtered = filtered.filter(t => t.payee_id === this.payeeFilter);
+        }
 
         const container = document.getElementById('transactions-list');
         const allContainer = document.getElementById('all-transactions-list');
@@ -639,6 +706,19 @@ class DashboardController {
         this.renderScheduledBills(config);
         this.renderCardBills(config);
         this.renderGamificationBadge(config);
+        this.renderPayeeFilter(config);
+    }
+
+    renderPayeeFilter(config) {
+        const select = document.getElementById('dash-payee-filter');
+        if (!select) return;
+
+        const currentVal = select.value;
+        select.innerHTML = '<option value="all">Filtrar por Favorecido...</option>';
+        
+        config.payees.forEach(p => {
+            select.innerHTML += `<option value="${p.id}" ${currentVal === p.id ? 'selected' : ''}>${p.name}</option>`;
+        });
     }
 
     updateElement(id, value = null, attrs = {}) {

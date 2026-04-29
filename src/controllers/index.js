@@ -5,3 +5,8 @@ export { default as ReportsController } from './ReportsController.js';
 export { default as TransactionController } from './TransactionController.js';
 export { default as GoalController } from './GoalController.js';
 export { default as AuthController } from './AuthController.js';
+export { default as PayeeController } from './PayeeController.js';
+export { default as CalendarController } from './CalendarController.js';
+export { default as FamilyController } from './FamilyController.js';
+export { default as SimulatorController } from './SimulatorController.js';
+export { default as ImportController } from './ImportController.js';

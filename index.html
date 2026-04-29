@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (Excel export) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
@@ -53,10 +55,18 @@
     <div id="app-screen" class="view active">
         <header class="app-header">
             <div class="user-info">
-                <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                <div class="avatar" id="user-avatar-btn" title="Editar Perfil">
+                    <i class="fa-solid fa-user" id="avatar-icon"></i>
+                    <img id="avatar-img" style="display:none; width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">
+                </div>
                 <div>
                     <p class="greeting">Olá,</p>
-                    <h3 id="display-user-email">Usuário</h3>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: bold; font-size: 1.1rem; padding: 0; cursor: pointer; appearance: none;">
+                            <option value="casal">Casal</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: var(--text-sec);"></i>
+                    </div>
                 </div>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
@@ -64,6 +74,7 @@
                     <button id="theme-dark" class="active" title="Tema Escuro"><i class="fa-solid fa-moon"></i></button>
                     <button id="theme-light" title="Tema Claro"><i class="fa-solid fa-sun"></i></button>
                 </div>
+                <button id="help-btn" class="btn-icon" title="Ajuda"><i class="fa-solid fa-circle-question"></i></button>
                 <button id="fab-add" class="btn-icon plus-top" style="background: var(--accent); color: white;"><i class="fa-solid fa-plus"></i></button>
                 <button id="logout-btn" class="btn-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
             </div>
@@ -81,8 +92,14 @@
                 <button class="nav-item" data-tab="debts-view" title="Dívidas">
                     <i class="fa-solid fa-hand-holding-dollar"></i>
                 </button>
+                <button class="nav-item" data-tab="calendar-view" title="Calendário">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </button>
                 <button class="nav-item" data-tab="reports-view" title="Relatórios">
                     <i class="fa-solid fa-chart-area"></i>
+                </button>
+                <button class="nav-item" data-tab="simulator-view" title="Simulador">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </button>
             </div>
         </nav>
@@ -105,6 +122,9 @@
                         <div class="projection-chip" style="margin: 0 auto; background: rgba(255,255,255,0.1);">
                             <i class="fa-solid fa-wand-sparkles"></i>
                             Total em conta: <span id="total-balance">R$ 0,00</span>
+                        </div>
+                        <!-- Wallet Breakdown -->
+                        <div id="wallet-type-breakdown" style="max-width: 250px; margin: 12px auto 0; padding: 0 10px;">
                         </div>
                         <div id="balance-insight-container"></div>
                         <p style="font-size: 0.7rem; opacity: 0.6; margin-top: 8px;">Projeção estatística p/ fim do mês: <b id="stat-projection">R$ 0,00</b></p>
@@ -288,10 +308,17 @@
                         </div>
 
                         <div class="list-filters">
-                            <button class="filter-btn active" data-filter="all">Todos</button>
-                            <button class="filter-btn" data-filter="eu">Eu</button>
-                            <button class="filter-btn" data-filter="esposa">Ela</button>
-                            <button class="filter-btn" data-filter="ambos">Ambos</button>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button class="filter-btn active" data-filter="all">Todos</button>
+                                <button class="filter-btn" data-filter="eu">Eu</button>
+                                <button class="filter-btn" data-filter="esposa">Ela</button>
+                                <button class="filter-btn" data-filter="ambos">Ambos</button>
+                            </div>
+                            <div class="input-group" style="margin: 0; min-width: 150px;">
+                                <select id="dash-payee-filter" style="background: rgba(15,23,42,0.6); color: white; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.75rem;">
+                                    <option value="all">Filtrar por Favorecido...</option>
+                                </select>
+                            </div>
                         </div>
                         <div id="transactions-list" class="transactions-list">
                             <div class="empty-state">Carregando transações...</div>
@@ -316,8 +343,10 @@
 
                 <div class="glass-card mt-4 highlight-card">
                     <div class="section-header" style="margin-bottom: 12px;">
-                        <h3>🏦 Contas / Carteiras</h3>
-                        <button id="add-wallet-btn" class="btn-text">+ Nova Conta</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="window.app.importController.openModal(window.app.config)" class="btn-text" style="color: var(--accent);">📥 Importar Extrato</button>
+                            <button id="add-wallet-btn" class="btn-text">+ Nova Conta</button>
+                        </div>
                     </div>
                     <div id="wallets-config-list" class="config-list">
                         <div class="empty-state">Nenhuma conta cadastrada.</div>
@@ -355,6 +384,25 @@
                     <p class="subtitle" style="text-align: left; font-size: 0.8rem; margin-bottom: 16px;">Contas fixas recorrentes do mês (Aluguel, Luz, etc.)</p>
                     <div id="scheduled-bills-list" class="scheduled-list">
                         <!-- List via JS -->
+                    </div>
+                </div>
+
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>👥 Favorecidos</h3>
+                        <button onclick="window.app.openPayeeManager()" class="btn-text">Gerenciar</button>
+                    </div>
+                    <p class="subtitle" style="text-align: left; font-size: 0.8rem;">Contatos frequentes para pagamentos e recebimentos.</p>
+                </div>
+
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>👨‍👩‍👧‍👦 Família e Perfis</h3>
+                        <button onclick="window.app.openFamilyManager()" class="btn-text">Gerenciar</button>
+                    </div>
+                    <p class="subtitle" style="text-align: left; font-size: 0.8rem;">Compartilhe o app com familiares e crie perfis para dependentes.</p>
+                    <div id="family-members-list" class="config-list mt-2">
+                        <!-- Members/Profiles via JS -->
                     </div>
                 </div>
             </div>
@@ -422,6 +470,7 @@
                         </div>
                         <button id="generate-report-btn" class="btn-primary" style="padding: 8px 12px;"><i class="fa-solid fa-search"></i></button>
                         <button id="export-btn" class="btn-secondary" title="Exportar CSV"><i class="fa-solid fa-download"></i></button>
+                        <button id="export-excel-btn" class="btn-secondary" title="Exportar Excel" style="color: #1d6f42;"><i class="fa-solid fa-file-excel"></i></button>
                     </div>
                 </div>
 
@@ -498,10 +547,109 @@
                     <div id="category-breakdown-list"></div>
                 </div>
 
+                <!-- Detalhamento por Favorecido -->
+                <div class="glass-card" style="margin-bottom: 16px; padding: 12px;">
+                    <h4 style="font-size: 0.8rem; margin-bottom: 12px;">📊 Gastos por Favorecido</h4>
+                    <div id="payee-report-list" class="config-list">
+                        <!-- List via JS -->
+                    </div>
+                </div>
+
                 <!-- Lista de Transações -->
                 <div class="glass-card" style="padding: 12px;">
                     <h4 style="font-size: 0.8rem; margin-bottom: 8px;">Transações Recentes</h4>
                     <div id="report-transactions-list" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></div>
+                </div>
+            </div>
+
+            <!-- Calendar View (Tab 5) -->
+            <div id="calendar-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button id="calendar-prev" class="btn-icon"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <h3 id="calendar-month-display" style="margin: 0;">Mês Ano</h3>
+                            <div class="view-toggle" style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 2px; border-radius: 8px;">
+                                <button onclick="window.app.calendarController.setView('grid')" id="cal-view-grid" class="btn-text active" style="font-size: 0.65rem; padding: 4px 8px;">Grade</button>
+                                <button onclick="window.app.calendarController.setView('list')" id="cal-view-list" class="btn-text" style="font-size: 0.65rem; padding: 4px 8px;">Lista</button>
+                            </div>
+                        </div>
+                        <button id="calendar-next" class="btn-icon"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                
+                <div id="calendar-grid-container" class="glass-card entrance-anim">
+                    <!-- Grid will be rendered here by JS -->
+                </div>
+            </div>
+
+            <!-- Simulator View (Tab 6) -->
+            <div id="simulator-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <h2>📈 Simulador de Fluxo de Caixa</h2>
+                </div>
+
+                <!-- Projection Chart Card -->
+                <div class="glass-card entrance-anim" style="margin-bottom: 24px; padding: 20px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 16px;">📊 Projeção de Saldo (12 Meses)</h3>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="simulator-chart"></canvas>
+                    </div>
+                    
+                    <div id="sim-neg-alert" class="hidden"></div>
+                </div>
+
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div id="sim-min-balance" class="stat-card glass-card" style="padding: 16px;">
+                        <!-- JS Render -->
+                    </div>
+                    <div class="stat-card glass-card" style="padding: 16px; flex-direction: column; align-items: center;">
+                        <p style="font-size: 0.75rem; color: var(--text-sec);">Cenário</p>
+                        <h3 id="sim-active-count" style="color: var(--accent);">0 Ativos</h3>
+                    </div>
+                </div>
+
+                <div class="budget-owner-row">
+                    <!-- Simulations Management -->
+                    <div class="glass-card" style="flex: 1.5; padding: 16px;">
+                        <h3 style="font-size: 1rem; margin-bottom: 16px;">⚙️ Cenários de Simulação</h3>
+                        <div id="simulations-list">
+                            <!-- JS Render -->
+                        </div>
+                    </div>
+
+                    <!-- Add Simulation Form -->
+                    <div class="glass-card" style="flex: 1; padding: 16px;">
+                        <h3 style="font-size: 1rem; margin-bottom: 16px;">➕ Novo Evento</h3>
+                        <div class="input-group">
+                            <label>Nome do Evento</label>
+                            <input type="text" id="sim-name" placeholder="Ex: Compra de Carro">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="input-group" style="flex: 1;">
+                                <label>Valor Total (R$)</label>
+                                <input type="number" id="sim-amount" placeholder="0,00">
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label>Tipo</label>
+                                <select id="sim-type" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                                    <option value="despesa">Despesa</option>
+                                    <option value="receita">Receita</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="input-group" style="flex: 1;">
+                                <label>Parcelas</label>
+                                <input type="number" id="sim-installments" value="1" min="1">
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label>Início</label>
+                                <input type="date" id="sim-date">
+                            </div>
+                        </div>
+                        <button onclick="window.app.simulatorController.addSimulation(window.app.config)" class="btn-primary w-full mt-2">Simular Evento</button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -592,6 +740,12 @@
                         <span style="font-size: 0.75rem; color: var(--accent);">Cada mês: <b id="installment-calc">R$ 0,00</b></span>
                     </div>
                     <input type="number" id="trans-installments" value="1" min="1" max="60">
+                </div>
+
+                <div class="input-group">
+                    <label>Favorecido</label>
+                    <input type="text" id="trans-payee" list="payees-datalist" placeholder="Quem recebeu/pagou?">
+                    <datalist id="payees-datalist"></datalist>
                 </div>
 
                 <div class="input-group">
@@ -854,11 +1008,73 @@
                     <input type="text" id="wallet-name" required placeholder="Ex: Nubank, Caixa, Dinheiro...">
                 </div>
                 <div class="input-group">
+                    <label>Tipo de Conta</label>
+                    <div class="owner-selector" style="flex-wrap: wrap;">
+                        <input type="radio" id="wtype-checking" name="wallet-type" value="conta_corrente" checked>
+                        <label for="wtype-checking">🏦 Corrente</label>
+                        <input type="radio" id="wtype-savings" name="wallet-type" value="poupanca">
+                        <label for="wtype-savings">💰 Poupança</label>
+                        <input type="radio" id="wtype-invest" name="wallet-type" value="investimento">
+                        <label for="wtype-invest">📈 Invest.</label>
+                        <input type="radio" id="wtype-cash" name="wallet-type" value="dinheiro">
+                        <label for="wtype-cash">💵 Dinheiro</label>
+                        <input type="radio" id="wtype-other" name="wallet-type" value="outro">
+                        <label for="wtype-other">🗂️ Outro</label>
+                    </div>
+                </div>
+                <div class="input-group">
                     <label>Saldo Inicial (R$)</label>
                     <input type="number" id="wallet-balance" step="0.01" value="0" placeholder="0,00">
                 </div>
                 <button type="submit" class="btn-primary w-full mt-4">Salvar Conta</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Payee Manager Modal -->
+    <div id="payee-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>👥 Gerenciar Favorecidos</h3>
+                <button id="close-payee-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="payee-form" style="margin-bottom: 20px;">
+                <div class="input-group">
+                    <label>Nome do Favorecido</label>
+                    <input type="text" id="payee-new-name" required placeholder="Ex: Sabesp, Mercado Livre...">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>CPF/CNPJ (Opcional)</label>
+                        <input type="text" id="payee-new-doc" placeholder="00.000.000/0000-00">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>Categoria Padrão</label>
+                        <select id="payee-new-cat" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <option value="Mercado">Mercado</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Casa">Casa</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Pets">Pets</option>
+                            <option value="Compras">Compras</option>
+                            <option value="Educação">Educação</option>
+                            <option value="Viagem">Viagem</option>
+                            <option value="Presentes">Presentes</option>
+                            <option value="Investimentos">Investimentos</option>
+                            <option value="Assinaturas">Assinaturas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full">Adicionar Favorecido</button>
+            </form>
+
+            <div id="payee-manager-list" class="config-list" style="max-height: 300px; overflow-y: auto;">
+                <!-- List via JS -->
+            </div>
         </div>
     </div>
 
@@ -953,8 +1169,217 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>👤 Meu Perfil</h3>
+                <button id="close-profile-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div id="profile-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; color: white; margin: 0 auto 12px; overflow: hidden; cursor: pointer;" title="Clique para trocar foto">
+                    <i class="fa-solid fa-user" id="profile-avatar-icon"></i>
+                    <img id="profile-avatar-img-preview" style="display:none; width:100%; height:100%; object-fit:cover;" alt="Avatar">
+                </div>
+                <div>
+                    <label for="profile-avatar-file" style="cursor: pointer; font-size: 0.8rem; color: var(--accent);">
+                        <i class="fa-solid fa-camera"></i> Trocar foto
+                    </label>
+                    <input type="file" id="profile-avatar-file" accept="image/*" style="display:none;">
+                </div>
+            </div>
+            <form id="profile-form">
+                <div class="input-group">
+                    <label>Nome de Exibição</label>
+                    <input type="text" id="profile-display-name" placeholder="Como você quer ser chamado?">
+                </div>
+                <div class="input-group">
+                    <label>E-mail</label>
+                    <input type="email" id="profile-email" readonly style="opacity: 0.6; cursor: not-allowed;">
+                </div>
+                <hr style="border-color: var(--glass-border); margin: 16px 0;">
+                <p style="font-size: 0.85rem; color: var(--text-sec); margin-bottom: 12px;">Trocar senha (deixe em branco para manter)</p>
+                <div class="input-group">
+                    <label>Nova Senha</label>
+                    <input type="password" id="profile-new-password" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="input-group">
+                    <label>Confirmar Senha</label>
+                    <input type="password" id="profile-confirm-password" placeholder="Repita a nova senha">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Perfil</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help-overlay" class="help-overlay hidden"></div>
+
+    <!-- Help Drawer -->
+    <div id="help-drawer" class="help-drawer hidden">
+        <div class="help-drawer-header">
+            <h3>📖 Como usar o app</h3>
+            <button id="close-help-drawer" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="help-drawer-content">
+            <div class="help-section">
+                <h4>🏠 Dashboard</h4>
+                <p>Resumo financeiro do mês. Use as setas para navegar entre meses. Os cards mostram <b>Receitas</b>, <b>Despesas</b> e <b>Saldo Livre</b>. O filtro <b>Eu/Ela/Ambos</b> divide por responsável.</p>
+            </div>
+            <div class="help-section">
+                <h4>📅 Planejamento</h4>
+                <p><b>Orçamentos:</b> Limite mensal por categoria. <b>Contas Programadas:</b> Lançamentos recorrentes (aluguel, assinaturas...) com controle de pagamento. <b>Cartões:</b> Gerencie cartões com fechamento e vencimento. <b>Carteiras:</b> Contas bancárias por tipo.</p>
+            </div>
+            <div class="help-section">
+                <h4>➕ Lançamentos</h4>
+                <p>Clique no <b>+</b> para registrar uma transação. Selecione tipo, valor, categoria e responsável. Use o modo <b>Split</b> para dividir uma compra em categorias diferentes.</p>
+            </div>
+            <div class="help-section">
+                <h4>📊 Relatórios</h4>
+                <p>Filtre por período e veja gráficos de gastos. Exporte em <b>CSV</b> (simples) ou <b>Excel</b> (com múltiplas abas e formatação).</p>
+            </div>
+            <div class="help-section">
+                <h4>💳 Dívidas</h4>
+                <p>Cadastre dívidas e financiamentos. Registre pagamentos e acompanhe o progresso. O app calcula parcelas restantes automaticamente.</p>
+            </div>
+            <div class="help-section">
+                <h4>🎯 Metas</h4>
+                <p>Defina metas de poupança com prazo e valor alvo. Registre aportes e acompanhe o progresso.</p>
+            </div>
+            <div class="help-section">
+                <h4>👤 Perfil</h4>
+                <p>Clique no avatar no canto superior esquerdo para editar seu nome, foto e senha.</p>
+            </div>
+            <div class="help-section">
+                <h4>📈 Simulador</h4>
+                <p>Projete seu futuro financeiro! O <b>Cenário Base</b> usa seus dados reais. Adicione <b>Eventos</b> (como uma nova compra parcelada) para ver como isso afetará seu saldo nos próximos 12 meses.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tour Tooltip -->
+    <div id="tour-tooltip" class="tour-tooltip hidden">
+        <h4 id="tour-title"></h4>
+        <p id="tour-body"></p>
+        <div class="tour-buttons">
+            <button id="tour-skip" class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">Pular tour</button>
+            <button id="tour-next" class="btn-primary" style="padding: 6px 16px; font-size: 0.8rem;">Próximo →</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="src/App.js"></script>
     <script type="module" src="tests/runner.js"></script>
+    <!-- Family Manager Modal -->
+    <div id="family-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3>👨‍👩‍👧‍👦 Gestão Familiar</h3>
+                <button id="close-family-modal" class="close-btn">×</button>
+            </div>
+            
+            <div class="tabs-mini" style="display: flex; gap: 8px; margin-bottom: 20px;">
+                <button id="family-tab-members" class="btn-text active">Convites</button>
+                <button id="family-tab-profiles" class="btn-text">Perfis Dependentes</button>
+            </div>
+
+            <div id="family-content-members">
+                <div class="input-group">
+                    <label>Convidar por E-mail</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="email" id="invite-email" placeholder="email@exemplo.com" class="w-full">
+                        <button onclick="window.app.familyController.sendInvite()" class="btn-primary">Enviar</button>
+                    </div>
+                </div>
+                <div id="members-list" class="config-list mt-4">
+                    <!-- Members via JS -->
+                </div>
+            </div>
+
+            <div id="family-content-profiles" class="hidden">
+                <form id="profile-form-new">
+                    <div class="input-group">
+                        <label>Novo Perfil (Mãe, Filho, etc)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-profile-name" placeholder="Nome do perfil" class="w-full">
+                            <button type="submit" class="btn-primary">Criar</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="profiles-list" class="config-list mt-4">
+                    <!-- Profiles via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Details Modal -->
+    <div id="day-details-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 id="day-details-title">Dia 01/01</h3>
+                <button id="close-day-details" class="close-btn">×</button>
+            </div>
+            <div id="day-details-content" class="transactions-list">
+                <!-- List via JS -->
+            </div>
+            <div class="modal-footer" style="margin-top: 20px;">
+                <button id="day-add-trans-btn" class="btn-primary w-full">Novo Lançamento</button>
+            </div>
+        </div>
+    </div>
+    <!-- Import Statement Modal -->
+    <div id="import-modal" class="modal hidden">
+        <div class="modal-content glass-card list-modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>📥 Importar Extrato Bancário</h3>
+                <button onclick="window.app.importController.closeModal()" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="import-drop-zone" class="import-drop-zone">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>Arraste seu arquivo <b>.OFX</b> ou <b>.QFX</b> aqui</p>
+                <span style="font-size: 0.8rem; opacity: 0.6; margin: 8px 0 16px;">ou clique para selecionar do seu computador</span>
+                <input type="file" id="import-file-input" accept=".ofx,.qfx" style="display: none;">
+                <button class="btn-secondary" onclick="document.getElementById('import-file-input').click()">Selecionar Arquivo</button>
+            </div>
+
+            <div id="import-review-section" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                    <div class="input-group" style="margin: 0; flex: 1; max-width: 300px;">
+                        <label style="font-size: 0.7rem;">Conta de Destino</label>
+                        <select id="import-wallet-select" class="w-full" style="background: var(--bg-prime); padding: 8px; border: 1px solid var(--glass-border); color: white; border-radius: 8px;"></select>
+                    </div>
+                    <div style="text-align: right;">
+                        <span id="import-count" style="font-size: 0.9rem; font-weight: 600; color: var(--accent);">0 selecionadas</span>
+                        <p style="font-size: 0.7rem; opacity: 0.6;">Revise os dados antes de confirmar</p>
+                    </div>
+                </div>
+
+                <div class="import-table-container scrollable">
+                    <table class="import-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-check"></i></th>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-table-body">
+                            <!-- Transactions via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button onclick="window.app.importController.closeModal()" class="btn-secondary" style="flex: 1;">Cancelar</button>
+                    <button onclick="window.app.importController.processImport(window.app.config)" class="btn-primary" style="flex: 2;">Confirmar Importação</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -4,7 +4,8 @@ const STORAGE_KEYS = {
     CONFIG: 'finance_app_config',
     USER: 'finance_user',
     ALERTS_CHECKED: 'alerts_checked',
-    THEME: 'finance_app_theme'
+    THEME: 'finance_app_theme',
+    TOUR_COMPLETED: 'tour_completed'
 };
 
 class StorageService {
@@ -54,6 +55,14 @@ class StorageService {
 
     getTheme() {
         return localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
+    }
+
+    setTourCompleted(value = true) {
+        localStorage.setItem(STORAGE_KEYS.TOUR_COMPLETED, value.toString());
+    }
+
+    getTourCompleted() {
+        return localStorage.getItem(STORAGE_KEYS.TOUR_COMPLETED) === 'true';
     }
 
     clearAll() {

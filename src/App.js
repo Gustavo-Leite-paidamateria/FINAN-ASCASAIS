@@ -1,4 +1,4 @@
-import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController } from './controllers/index.js';
+import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController } from './controllers/index.js';
 import { storageService, notificationService } from './services/index.js';
 import { router } from './routes/router.js';
 import { UserConfig } from './models/index.js';
@@ -13,6 +13,11 @@ class App {
         this.transactionController = new TransactionController();
         this.goalController = new GoalController();
         this.authController = new AuthController();
+        this.payeeController = new PayeeController();
+        this.calendarController = new CalendarController();
+        this.familyController = new FamilyController();
+        this.simulatorController = new SimulatorController();
+        this.importController = new ImportController();
         this.currentView = 'dashboard';
     }
 
@@ -21,11 +26,14 @@ class App {
         this.setupEventListeners();
         this.setupNavigation();
         this.setupReconcilation();
-        
+        this.setupProfile();
+        this.setupHelp();
+        this.setupImport();
+
         notificationService.init();
-        
+
         window.app = this;
-        
+
         await this.authController.checkAuth();
     }
 
@@ -127,6 +135,13 @@ class App {
                 this.dashboardController.setFilter(btn.dataset.filter);
             });
         });
+
+        const dashPayeeFilter = document.getElementById('dash-payee-filter');
+        if (dashPayeeFilter) {
+            dashPayeeFilter.addEventListener('change', () => {
+                this.dashboardController.setPayeeFilter(dashPayeeFilter.value);
+            });
+        }
 
         const prevMonth = document.getElementById('prev-month');
         const nextMonth = document.getElementById('next-month');
@@ -307,8 +322,14 @@ class App {
 
         const exportBtn = document.getElementById('export-btn');
         if (exportBtn) {
-            exportBtn.addEventListener('click', () => 
+            exportBtn.addEventListener('click', () =>
                 this.reportsController.exportCsv());
+        }
+
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () =>
+                this.reportsController.exportExcel());
         }
 
         const schedRecRadios = document.getElementsByName('sched-recurrence');
@@ -334,6 +355,58 @@ class App {
                 if (walletGrp) walletGrp.classList.toggle('hidden', val === 'card');
             });
         });
+
+        // Payee events
+        const transPayee = document.getElementById('trans-payee');
+        if (transPayee) {
+            transPayee.addEventListener('change', () => this.transactionController.onPayeeChange(this.config));
+        }
+
+        const closePayeeModal = document.getElementById('close-payee-modal');
+        if (closePayeeModal) {
+            closePayeeModal.addEventListener('click', () => 
+                document.getElementById('payee-modal')?.classList.add('hidden'));
+        }
+
+        const payeeForm = document.getElementById('payee-form');
+        if (payeeForm) {
+            payeeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.payeeController.add(this.config);
+            });
+        }
+
+        // Calendar events
+        const calPrev = document.getElementById('calendar-prev');
+        const calNext = document.getElementById('calendar-next');
+        if (calPrev) calPrev.addEventListener('click', () => this.calendarController.navigate(-1));
+        if (calNext) calNext.addEventListener('click', () => this.calendarController.navigate(1));
+
+        // Profile switcher
+        const profileSelector = document.getElementById('profile-selector');
+        if (profileSelector) {
+            profileSelector.addEventListener('change', () => this.familyController.switchProfile(profileSelector.value));
+        }
+
+        // Family Manager events
+        const closeFamilyModal = document.getElementById('close-family-modal');
+        if (closeFamilyModal) {
+            closeFamilyModal.addEventListener('click', () => 
+                document.getElementById('family-modal')?.classList.add('hidden'));
+        }
+
+        const familyTabMembers = document.getElementById('family-tab-members');
+        const familyTabProfiles = document.getElementById('family-tab-profiles');
+        if (familyTabMembers) familyTabMembers.addEventListener('click', () => this.familyController.setTab('members'));
+        if (familyTabProfiles) familyTabProfiles.addEventListener('click', () => this.familyController.setTab('profiles'));
+
+        const profileFormNew = document.getElementById('profile-form-new');
+        if (profileFormNew) {
+            profileFormNew.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.familyController.addProfile(this.config);
+            });
+        }
     }
 
     setupNavigation() {
@@ -374,8 +447,180 @@ class App {
         if (tabId === 'reports-view') {
             this.reportsController.init();
         }
+        if (tabId === 'calendar-view') {
+            this.renderCalendar();
+        }
+        if (tabId === 'simulator-view') {
+            this.simulatorController.render(this.config);
+        }
 
         router.navigate(tabId);
+    }
+
+    setupProfile() {
+        const avatarBtn = document.getElementById('user-avatar-btn');
+        if (avatarBtn) {
+            avatarBtn.addEventListener('click', () => this.openProfileModal());
+        }
+
+        const closeProfileModal = document.getElementById('close-profile-modal');
+        if (closeProfileModal) {
+            closeProfileModal.addEventListener('click', () =>
+                document.getElementById('profile-modal')?.classList.add('hidden'));
+        }
+
+        const profileAvatarPreview = document.getElementById('profile-avatar-preview');
+        const profileAvatarFile = document.getElementById('profile-avatar-file');
+        if (profileAvatarPreview && profileAvatarFile) {
+            profileAvatarPreview.addEventListener('click', () => profileAvatarFile.click());
+            profileAvatarFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 500 * 1024) {
+                    notificationService.warning('Aviso', 'Imagem muito grande. Use uma imagem menor que 500 KB.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    this._pendingAvatarBase64 = ev.target.result;
+                    const icon = document.getElementById('profile-avatar-icon');
+                    const img = document.getElementById('profile-avatar-img-preview');
+                    if (img && icon) {
+                        img.src = ev.target.result;
+                        img.style.display = 'block';
+                        icon.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        const profileForm = document.getElementById('profile-form');
+        if (profileForm) {
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const displayName = document.getElementById('profile-display-name')?.value?.trim();
+                const newPw = document.getElementById('profile-new-password')?.value;
+                const confirmPw = document.getElementById('profile-confirm-password')?.value;
+                await this.authController.saveProfile(
+                    this.config,
+                    displayName,
+                    this._pendingAvatarBase64 ?? null,
+                    newPw,
+                    confirmPw
+                );
+                this._pendingAvatarBase64 = undefined;
+            });
+        }
+    }
+
+    openProfileModal() {
+        this._pendingAvatarBase64 = undefined;
+        const userData = this.config?.userData || {};
+        const email = storageService.getUser() || '';
+
+        const nameInput = document.getElementById('profile-display-name');
+        const emailInput = document.getElementById('profile-email');
+        const pwInput = document.getElementById('profile-new-password');
+        const confirmInput = document.getElementById('profile-confirm-password');
+        const icon = document.getElementById('profile-avatar-icon');
+        const img = document.getElementById('profile-avatar-img-preview');
+        const fileInput = document.getElementById('profile-avatar-file');
+
+        if (nameInput) nameInput.value = userData.display_name || '';
+        if (emailInput) emailInput.value = email;
+        if (pwInput) pwInput.value = '';
+        if (confirmInput) confirmInput.value = '';
+        if (fileInput) fileInput.value = '';
+
+        if (img && icon) {
+            if (userData.avatar_url) {
+                img.src = userData.avatar_url;
+                img.style.display = 'block';
+                icon.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                icon.style.display = '';
+            }
+        }
+
+        document.getElementById('profile-modal')?.classList.remove('hidden');
+    }
+
+    setupHelp() {
+        const helpBtn = document.getElementById('help-btn');
+        const helpDrawer = document.getElementById('help-drawer');
+        const helpOverlay = document.getElementById('help-overlay');
+        const closeHelpDrawer = document.getElementById('close-help-drawer');
+
+        const openDrawer = () => {
+            helpOverlay?.classList.remove('hidden');
+            helpDrawer?.classList.remove('hidden');
+            setTimeout(() => helpDrawer?.classList.add('open'), 10);
+        };
+
+        const closeDrawer = () => {
+            helpDrawer?.classList.remove('open');
+            setTimeout(() => {
+                helpDrawer?.classList.add('hidden');
+                helpOverlay?.classList.add('hidden');
+            }, 350);
+        };
+
+        if (helpBtn) helpBtn.addEventListener('click', openDrawer);
+        if (closeHelpDrawer) closeHelpDrawer.addEventListener('click', closeDrawer);
+        if (helpOverlay) helpOverlay.addEventListener('click', closeDrawer);
+    }
+
+    startTour() {
+        const steps = [
+            { title: '👋 Bem-vindo ao FinançaCasal!', body: 'Veja o resumo financeiro do mês aqui no Dashboard. Use as setas para navegar entre meses.', anchor: 'dashboard-view', pos: 'bottom' },
+            { title: '➕ Registrar Lançamentos', body: 'Clique no botão + para adicionar receitas e despesas rapidamente.', anchor: 'fab-add', pos: 'bottom' },
+            { title: '📅 Planejamento', body: 'Na aba Planejamento você configura orçamentos, contas agendadas, cartões e carteiras.', anchor: null, pos: 'center' },
+            { title: '❓ Precisa de ajuda?', body: 'Clique no ícone ? no cabeçalho para abrir o guia completo do app a qualquer momento.', anchor: 'help-btn', pos: 'bottom' }
+        ];
+
+        let step = 0;
+        const tooltip = document.getElementById('tour-tooltip');
+        const title = document.getElementById('tour-title');
+        const body = document.getElementById('tour-body');
+        const nextBtn = document.getElementById('tour-next');
+        const skipBtn = document.getElementById('tour-skip');
+
+        const showStep = () => {
+            if (step >= steps.length) {
+                tooltip?.classList.add('hidden');
+                storageService.setTourCompleted(true);
+                return;
+            }
+            const s = steps[step];
+            if (title) title.textContent = s.title;
+            if (body) body.textContent = s.body;
+
+            tooltip?.classList.remove('hidden');
+
+            if (s.anchor) {
+                const el = document.getElementById(s.anchor);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    tooltip.style.top = (rect.bottom + 12) + 'px';
+                    tooltip.style.left = Math.max(8, rect.left) + 'px';
+                    tooltip.style.transform = '';
+                    return;
+                }
+            }
+            tooltip.style.top = '50%';
+            tooltip.style.left = '50%';
+            tooltip.style.transform = 'translate(-50%, -50%)';
+        };
+
+        if (nextBtn) nextBtn.addEventListener('click', () => { step++; showStep(); });
+        if (skipBtn) skipBtn.addEventListener('click', () => {
+            tooltip?.classList.add('hidden');
+            storageService.setTourCompleted(true);
+        });
+
+        showStep();
     }
 
     setupReconcilation() {
@@ -532,6 +777,51 @@ class App {
 
     async deleteTransaction(id) {
         await this.transactionController.delete(id);
+    }
+
+    // New methods for Sprint 2
+    renderCalendar() {
+        this.calendarController.render(this.config, this.dashboardController.transactions);
+    }
+
+    openPayeeManager() {
+        this.payeeController.renderManager(this.config);
+        document.getElementById('payee-modal')?.classList.remove('hidden');
+    }
+
+    openFamilyManager() {
+        this.familyController.render(this.config);
+        document.getElementById('family-modal')?.classList.remove('hidden');
+    }
+
+    setupImport() {
+        const dropZone = document.getElementById('import-drop-zone');
+        const fileInput = document.getElementById('import-file-input');
+
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                this.importController.handleFileUpload(file, this.config);
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                this.importController.handleFileUpload(file, this.config);
+            });
+        }
     }
 }
 

@@ -202,6 +202,13 @@ class TransactionController {
         const walletId = document.getElementById('trans-wallet')?.value;
         const debtId = document.getElementById('trans-debt')?.value;
         const baseAmount = parseFloat(document.getElementById('trans-amount')?.value);
+        const payeeName = document.getElementById('trans-payee')?.value?.trim();
+        let payeeId = null;
+
+        if (payeeName) {
+            const payee = await window.app.payeeController.ensurePayee(config, payeeName);
+            payeeId = payee?.id;
+        }
         
         if (this.isSplitMode) {
             const totalSplit = this.splitItems.reduce((acc, curr) => acc + curr.amount, 0);
@@ -269,7 +276,8 @@ class TransactionController {
                     forma_pagamento: payMethod,
                     status: 'Pago',
                     observacoes: JSON.stringify(meta),
-                    referencia: isSub ? 'assinatura' : null
+                    referencia: isSub ? 'assinatura' : null,
+                    payee_id: payeeId
                 });
             };
 
@@ -302,6 +310,28 @@ class TransactionController {
                 category: newTrans.categoria
             });
             config.installments.push(installmentMaster);
+
+            // TAMBÉM criar como Conta Programada se for Crediário para controle de baixa
+            if (payMethod === 'crediario') {
+                const endDate = new Date(newTrans.data);
+                endDate.setMonth(endDate.getMonth() + installments);
+                
+                const schedBill = new ScheduledBill({
+                    name: '[Parcelado] ' + description,
+                    amount: baseAmount / installments,
+                    category: category,
+                    dueDay: new Date(newTrans.data).getDate(),
+                    isMonthly: false,
+                    count: installments,
+                    startDate: newTrans.data,
+                    endDate: endDate.toISOString().split('T')[0],
+                    payMethod: 'pix',
+                    walletId: walletId || null,
+                    owner: owner
+                });
+                config.scheduledBills.push(schedBill);
+            }
+            
             await supabaseService.saveConfig(config);
         }
 
@@ -318,7 +348,7 @@ class TransactionController {
                     await this.handleSubscriptionLink(config, recordsToInsert[0]);
                 }
 
-                if (payMethod === 'card' && cardId) {
+                if (payMethod === 'card' && cardId && category === 'card_pay') {
                     await this.handleCardPayment(config, cardId, recordsToInsert[0]);
                 }
             }
@@ -339,6 +369,16 @@ class TransactionController {
                 const ym = `${transDate.getFullYear()}-${String(transDate.getMonth() + 1).padStart(2, '0')}`;
                 if (!bill.paidMonths.includes(ym)) {
                     bill.paidMonths.push(ym);
+
+                    // Sincronizar com Dívida se for o caso
+                    if (bill.name.startsWith('[Dívida] ')) {
+                        const debtName = bill.name.replace('[Dívida] ', '');
+                        const debt = config.debts?.find(d => d.name === debtName);
+                        if (debt) {
+                            debt.paid = (debt.paid || 0) + parseFloat(newTrans.valor);
+                        }
+                    }
+
                     storageService.saveConfig(config);
                     await supabaseService.saveConfig(config);
                     notificationService.success('🔗 Vinculado', `Conta "${bill.name}" marcada como paga!`);
@@ -443,6 +483,17 @@ class TransactionController {
                 await supabaseService.saveConfig(config);
                 notificationService.success('Sucesso', 'Assinatura adicionada ao planejamento');
             }
+        }
+    }
+
+    onPayeeChange(config) {
+        const payeeName = document.getElementById('trans-payee')?.value;
+        if (!payeeName) return;
+
+        const payee = config.payees.find(p => p.name === payeeName);
+        if (payee && payee.defaultCategory) {
+            const catRadio = document.querySelector(`input[name="trans-category"][value="${payee.defaultCategory}"]`);
+            if (catRadio) catRadio.checked = true;
         }
     }
 

@@ -63,20 +63,74 @@ class AuthController {
             }
             const user = session.user.email;
             storageService.saveUser(user);
-            
-            const userDisplay = document.getElementById('display-user-email');
-            if (userDisplay) {
-                userDisplay.innerHTML = `${user} <span id="user-badge" style="font-size: 0.65rem; padding: 3px 6px; border-radius: 8px; margin-left: 8px; font-weight:600; vertical-align: middle;"></span>`;
-            }
-            
+
             this.showApp();
             await this.initializeApp();
+            this.refreshHeader(window.app?.config);
             return true;
         } catch (e) {
             console.error("Check Auth Error:", e);
             this.showLogin();
             return false;
         }
+    }
+
+    refreshHeader(config) {
+        const userData = config?.userData || {};
+        const displayName = userData.display_name;
+        const avatarUrl = userData.avatar_url;
+        const email = storageService.getUser() || 'Usuário';
+
+        const userDisplay = document.getElementById('display-user-email');
+        if (userDisplay) userDisplay.textContent = displayName || email;
+
+        const avatarIcon = document.getElementById('avatar-icon');
+        const avatarImg = document.getElementById('avatar-img');
+        if (avatarImg && avatarIcon) {
+            if (avatarUrl) {
+                avatarImg.src = avatarUrl;
+                avatarImg.style.display = 'block';
+                avatarIcon.style.display = 'none';
+            } else {
+                avatarImg.style.display = 'none';
+                avatarIcon.style.display = '';
+            }
+        }
+    }
+
+    async saveProfile(config, displayName, avatarBase64, newPassword, confirmPassword) {
+        let changed = false;
+
+        if (newPassword) {
+            if (newPassword.length < 6) {
+                notificationService.error('Erro', 'A senha precisa ter pelo menos 6 caracteres.');
+                return false;
+            }
+            if (newPassword !== confirmPassword) {
+                notificationService.error('Erro', 'As senhas não conferem.');
+                return false;
+            }
+            try {
+                await supabaseService.updatePassword(newPassword);
+            } catch (e) {
+                notificationService.error('Erro', 'Falha ao atualizar senha: ' + e.message);
+                return false;
+            }
+        }
+
+        if (!config.userData) config.userData = {};
+        if (displayName !== undefined) { config.userData.display_name = displayName; changed = true; }
+        if (avatarBase64 !== null) { config.userData.avatar_url = avatarBase64; changed = true; }
+
+        if (changed) {
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+        }
+
+        this.refreshHeader(config);
+        notificationService.success('Sucesso', 'Perfil atualizado!');
+        document.getElementById('profile-modal')?.classList.add('hidden');
+        return true;
     }
 
     showLogin() {
@@ -94,34 +148,58 @@ class AuthController {
     }
 
     async initializeApp() {
-        const config = await this.loadConfig();
-        window.app.config = config;
-        
-        const processed = await window.app.dashboardController.autoProcessBills(config);
-        if (processed) {
-            notificationService.success('Sucesso', 'Contas automáticas processadas!');
+        try {
+            // 1. Get Workspace
+            const workspaces = await supabaseService.getWorkspaces();
+            if (!workspaces || workspaces.length === 0) {
+                // This shouldn't happen due to SQL migration, but handle just in case
+                notificationService.error('Erro', 'Workspace não encontrado. Contate o suporte.');
+                return;
+            }
+
+            // Set the first workspace as default for now
+            const ws = workspaces[0];
+            supabaseService.currentWorkspaceId = ws.workspace_id;
+            
+            // 2. Load Config within Workspace
+            const config = await this.loadConfig();
+            window.app.config = config;
+
+            // 3. Process data
+            const processed = await window.app.dashboardController.autoProcessBills(config);
+            if (processed) {
+                notificationService.success('Sucesso', 'Contas automáticas processadas!');
+            }
+
+            await window.app.dashboardController.loadData(config);
+
+            setTimeout(() => this.checkAlerts(config), 1000);
+
+            if (!storageService.getTourCompleted()) {
+                setTimeout(() => window.app?.startTour(), 1500);
+            }
+        } catch (e) {
+            console.error('Initialization error:', e);
+            notificationService.error('Erro', 'Falha ao carregar workspace.');
         }
-        
-        await window.app.dashboardController.loadData(config);
-        
-        setTimeout(() => this.checkAlerts(config), 1000);
     }
 
     async loadConfig() {
-        let config = storageService.loadConfig();
-        
-        if (!config) {
-            config = new UserConfig();
-        }
+        let config = new UserConfig();
 
         try {
             const cloudConfig = await supabaseService.loadConfig();
             if (cloudConfig) {
                 config = cloudConfig;
+                // Add workspace ID from context
+                config.workspace_id = supabaseService.currentWorkspaceId;
                 storageService.saveConfig(config);
             }
         } catch (e) {
             console.warn('Error loading cloud config:', e);
+            // Fallback to storage if offline
+            const local = storageService.loadConfig();
+            if (local) config = local;
         }
 
         if (!config.wallets || config.wallets.length === 0) {
