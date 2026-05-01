@@ -463,6 +463,9 @@ class App {
             avatarBtn.addEventListener('click', () => this.openProfileModal());
         }
 
+        // Initial population of profile switcher
+        this.familyController.renderProfileSwitcher(this.config);
+
         const closeProfileModal = document.getElementById('close-profile-modal');
         if (closeProfileModal) {
             closeProfileModal.addEventListener('click', () =>

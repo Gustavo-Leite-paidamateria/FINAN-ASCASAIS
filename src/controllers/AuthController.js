@@ -96,6 +96,9 @@ class AuthController {
                 avatarIcon.style.display = '';
             }
         }
+
+        // Refresh profile switcher
+        window.app?.familyController?.renderProfileSwitcher(config);
     }
 
     async saveProfile(config, displayName, avatarBase64, newPassword, confirmPassword) {
@@ -172,6 +175,9 @@ class AuthController {
             }
 
             await window.app.dashboardController.loadData(config);
+            
+            // Render profile switcher
+            window.app?.familyController?.renderProfileSwitcher(config);
 
             setTimeout(() => this.checkAlerts(config), 1000);
 

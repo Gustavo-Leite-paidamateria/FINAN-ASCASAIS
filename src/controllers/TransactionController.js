@@ -314,7 +314,8 @@ class TransactionController {
             // TAMBÉM criar como Conta Programada se for Crediário para controle de baixa
             if (payMethod === 'crediario') {
                 const endDate = new Date(newTrans.data);
-                endDate.setMonth(endDate.getMonth() + installments);
+                // Ajuste: installments - 1 para que a data final seja o mês da ÚLTIMA parcela
+                endDate.setMonth(endDate.getMonth() + installments - 1);
                 
                 const schedBill = new ScheduledBill({
                     name: '[Parcelado] ' + description,
