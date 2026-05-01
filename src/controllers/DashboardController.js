@@ -255,8 +255,6 @@ class DashboardController {
         this.renderInsights(config, metrics, projections);
     }
 
-    }
-
     async renderWalletBreakdown(config) {
         const container = document.getElementById('wallet-type-breakdown');
         if (!container) return;

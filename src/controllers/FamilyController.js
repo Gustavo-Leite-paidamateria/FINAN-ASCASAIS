@@ -64,9 +64,11 @@ export default class FamilyController {
         
         let options = `<option value="casal" ${!currentProfileId ? 'selected' : ''}>👫 Casal (Todos)</option>`;
         
-        (config.managedProfiles || []).forEach(p => {
-            options += `<option value="${p.id}" ${currentProfileId === p.id ? 'selected' : ''}>👤 ${p.name}</option>`;
-        });
+        if (config) {
+            (config.managedProfiles || []).forEach(p => {
+                options += `<option value="${p.id}" ${currentProfileId === p.id ? 'selected' : ''}>👤 ${p.name}</option>`;
+            });
+        }
 
         select.innerHTML = options;
     }
