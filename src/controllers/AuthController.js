@@ -136,6 +136,16 @@ class AuthController {
         return true;
     }
 
+    async switchWorkspace(workspaceId) {
+        if (workspaceId === supabaseService.currentWorkspaceId) return;
+
+        storageService.saveWorkspaceId(workspaceId);
+        notificationService.info('Trocando Espaço', 'Carregando dados do novo ambiente...');
+        
+        // Reload app
+        window.location.reload();
+    }
+
     showLogin() {
         document.getElementById('login-screen')?.classList.remove('hidden');
         document.getElementById('login-screen')?.classList.add('active');
@@ -155,14 +165,19 @@ class AuthController {
             // 1. Get Workspace
             const workspaces = await supabaseService.getWorkspaces();
             if (!workspaces || workspaces.length === 0) {
-                // This shouldn't happen due to SQL migration, but handle just in case
                 notificationService.error('Erro', 'Workspace não encontrado. Contate o suporte.');
                 return;
             }
 
-            // Set the first workspace as default for now
-            const ws = workspaces[0];
-            supabaseService.currentWorkspaceId = ws.workspace_id;
+            // Seleção inteligente de Workspace (Persistência)
+            const savedWsId = storageService.getWorkspaceId();
+            const preferredWs = workspaces.find(w => w.workspace_id === savedWsId) || workspaces[0];
+            
+            supabaseService.currentWorkspaceId = preferredWs.workspace_id;
+            storageService.saveWorkspaceId(preferredWs.workspace_id);
+
+            // Guardar a lista para o seletor na UI
+            this.availableWorkspaces = workspaces;
             
             // 2. Load Config within Workspace
             const config = await this.loadConfig();

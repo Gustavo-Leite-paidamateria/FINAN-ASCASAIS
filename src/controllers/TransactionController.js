@@ -65,6 +65,11 @@ class TransactionController {
             });
         }
 
+        const targetWalletSelect = document.getElementById('trans-target-wallet');
+        if (targetWalletSelect && config) {
+            targetWalletSelect.innerHTML = config.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        }
+
         const cardInvoiceInfo = document.getElementById('card-invoice-info');
         if (cardInvoiceInfo) cardInvoiceInfo.innerHTML = '';
         
@@ -226,14 +231,22 @@ class TransactionController {
                 notificationService.error('Atenção', 'Selecione um cartão de crédito.');
                 return;
             }
-        } else if (payMethod === 'pix') {
+        } else if (payMethod === 'pix' || payMethod === 'transfer') {
             if (!walletId) {
-                notificationService.error('Atenção', 'Selecione uma Conta/Carteira de saída.');
+                notificationService.error('Atenção', 'Selecione uma Conta/Carteira de origem.');
                 return;
             }
             
-            // Bloqueio de Saldo Insuficiente para Despesas
-            if (transType === 'Despesa') {
+            if (payMethod === 'transfer') {
+                const targetId = document.getElementById('trans-target-wallet')?.value;
+                if (!targetId || targetId === walletId) {
+                    notificationService.error('Atenção', 'Selecione uma conta de destino diferente da origem.');
+                    return;
+                }
+            }
+
+            // Bloqueio de Saldo Insuficiente para Despesas ou Transferências
+            if (transType === 'Despesa' || payMethod === 'transfer') {
                 const wallet = config.wallets.find(w => w.id === walletId);
                 if (wallet) {
                     const allTransactions = await supabaseService.fetchAllTransactions();
@@ -241,7 +254,7 @@ class TransactionController {
                     if (baseAmount > currentBalance) {
                         notificationService.error(
                             'Saldo Insuficiente', 
-                            `A conta tem apenas ${formatCurrency(currentBalance)}. Você não pode gastar ${formatCurrency(baseAmount)}.`
+                            `A conta de origem tem apenas ${formatCurrency(currentBalance)}.`
                         );
                         return;
                     }
@@ -261,38 +274,70 @@ class TransactionController {
             let recurrenceDate = new Date(baseDate);
             recurrenceDate.setMonth(recurrenceDate.getMonth() + m);
 
-            const pushRecord = (amt, specificDesc, ctg) => {
-                const meta = {
-                    owner: owner,
-                    cartao_id: payMethod === 'card' ? cardId : null,
-                    conta_id: walletId || null
-                };
+            if (payMethod === 'transfer') {
+                const targetId = document.getElementById('trans-target-wallet')?.value;
+                const sourceWallet = config.wallets.find(w => w.id === walletId);
+                const targetWallet = config.wallets.find(w => w.id === targetId);
+                
+                // Saída (Origem)
                 recordsToInsert.push({
-                    tipo: transType,
-                    valor: installments > 1 ? amt / installments : amt,
-                    descricao: specificDesc,
-                    categoria: ctg,
+                    tipo: 'Despesa',
+                    valor: baseAmount,
+                    descricao: `Transferência para ${targetWallet?.name || 'outra conta'}`,
+                    categoria: 'Outros',
                     data: recurrenceDate.toISOString(),
-                    forma_pagamento: payMethod,
+                    forma_pagamento: 'pix',
                     status: 'Pago',
-                    observacoes: JSON.stringify(meta),
-                    referencia: isSub ? 'assinatura' : null,
-                    payee_id: payeeId
+                    observacoes: JSON.stringify({ owner, conta_id: walletId, is_transfer: true }),
+                    referencia: 'transferencia'
                 });
-            };
 
-            if (this.isSplitMode) {
-                this.splitItems.forEach((si) => {
-                    let d = description + ` [${si.desc || 'Diversos'}]`;
-                    if (installments > 1) d += ` (1/${installments})`;
-                    else if (recurringMonths > 1) d += ` (Ciclo ${m+1}/${recurringMonths})`;
-                    pushRecord(si.amount, d, si.cat);
+                // Entrada (Destino)
+                recordsToInsert.push({
+                    tipo: 'Receita',
+                    valor: baseAmount,
+                    descricao: `Transferência de ${sourceWallet?.name || 'outra conta'}`,
+                    categoria: 'Outros',
+                    data: recurrenceDate.toISOString(),
+                    forma_pagamento: 'pix',
+                    status: 'Pago',
+                    observacoes: JSON.stringify({ owner, conta_id: targetId, is_transfer: true }),
+                    referencia: 'transferencia'
                 });
             } else {
-                let d = description;
-                if (installments > 1) d += ` (1/${installments})`;
-                else if (recurringMonths > 1) d += ` (Ciclo ${m+1}/${recurringMonths})`;
-                pushRecord(baseAmount, d, category);
+                const pushRecord = (amt, specificDesc, ctg) => {
+                    const meta = {
+                        owner: owner,
+                        cartao_id: payMethod === 'card' ? cardId : null,
+                        conta_id: walletId || null
+                    };
+                    recordsToInsert.push({
+                        tipo: transType,
+                        valor: installments > 1 ? amt / installments : amt,
+                        descricao: specificDesc,
+                        categoria: ctg,
+                        data: recurrenceDate.toISOString(),
+                        forma_pagamento: payMethod,
+                        status: 'Pago',
+                        observacoes: JSON.stringify(meta),
+                        referencia: isSub ? 'assinatura' : null,
+                        payee_id: payeeId
+                    });
+                };
+
+                if (this.isSplitMode) {
+                    this.splitItems.forEach((si) => {
+                        let d = description + ` [${si.desc || 'Diversos'}]`;
+                        if (installments > 1) d += ` (1/${installments})`;
+                        else if (recurringMonths > 1) d += ` (Ciclo ${m+1}/${recurringMonths})`;
+                        pushRecord(si.amount, d, si.cat);
+                    });
+                } else {
+                    let d = description;
+                    if (installments > 1) d += ` (1/${installments})`;
+                    else if (recurringMonths > 1) d += ` (Ciclo ${m+1}/${recurringMonths})`;
+                    pushRecord(baseAmount, d, category);
+                }
             }
         }
 

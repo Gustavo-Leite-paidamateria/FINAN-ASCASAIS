@@ -61,11 +61,16 @@
                 </div>
                 <div>
                     <p class="greeting">Olá,</p>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: bold; font-size: 1.1rem; padding: 0; cursor: pointer; appearance: none;">
-                            <option value="casal">Casal</option>
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: bold; font-size: 1.1rem; padding: 0; cursor: pointer; appearance: none;">
+                                <option value="casal">Casal</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: var(--text-sec);"></i>
+                        </div>
+                        <select id="workspace-selector" style="background: transparent; border: none; color: var(--text-sec); font-size: 0.7rem; padding: 0; cursor: pointer; appearance: none; width: fit-content; font-family: inherit;">
+                            <option value="">Carregando Espaço...</option>
                         </select>
-                        <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: var(--text-sec);"></i>
                     </div>
                 </div>
             </div>
@@ -705,6 +710,8 @@
                         <label for="pay-card"><i class="fa-solid fa-credit-card"></i> Cartão</label>
                         <input type="radio" id="pay-credit" name="pay-method" value="crediario">
                         <label for="pay-credit"><i class="fa-solid fa-file-invoice-dollar"></i> Crediário</label>
+                        <input type="radio" id="pay-transfer" name="pay-method" value="transfer">
+                        <label for="pay-transfer"><i class="fa-solid fa-right-left"></i> Transf.</label>
                     </div>
                 </div>
 
@@ -723,6 +730,15 @@
                         <!-- Cards via JS -->
                     </select>
                     <div id="card-invoice-info" style="margin-top: 8px; padding: 10px; background: rgba(59,130,246,0.2); border-radius: 8px; font-size: 0.85rem;"></div>
+                </div>
+
+                <!-- Seleção de Destino (Para Transferência) -->
+                <div id="transfer-selection-group" class="input-group hidden">
+                    <label>Conta / Carteira de Destino</label>
+                    <select id="trans-target-wallet" class="w-full" style="background: rgba(16,185,129,0.1); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--income); font-weight: bold;">
+                        <!-- Wallets via JS -->
+                    </select>
+                    <small style="color: var(--income); font-size: 0.72rem; display: block; margin-top: 5px;">O dinheiro sairá da conta de origem e entrará nesta.</small>
                 </div>
 
                 <!-- Seleção de Dívida -->

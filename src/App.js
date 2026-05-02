@@ -95,6 +95,11 @@ class App {
             logoutBtn.addEventListener('click', () => this.authController.logout());
         }
 
+        const workspaceSelector = document.getElementById('workspace-selector');
+        if (workspaceSelector) {
+            workspaceSelector.addEventListener('change', () => this.authController.switchWorkspace(workspaceSelector.value));
+        }
+
         const fab = document.getElementById('fab-add');
         if (fab) {
             fab.addEventListener('click', () => this.transactionController.openModal(this.config));
@@ -251,10 +256,17 @@ class App {
                 const cardGroup = document.getElementById('card-selection-group');
                 const installmentGroup = document.getElementById('installment-group');
                 const recurrenceGrp = document.getElementById('recurrence-group');
+                const transferGroup = document.getElementById('transfer-selection-group');
+                const walletGroup = document.getElementById('wallet-selection-group');
                 
                 if (cardGroup) cardGroup.classList.toggle('hidden', val !== 'card');
-                if (installmentGroup) installmentGroup.classList.toggle('hidden', val === 'pix');
-                if (recurrenceGrp) recurrenceGrp.classList.toggle('hidden', val !== 'pix');
+                if (installmentGroup) installmentGroup.classList.toggle('hidden', val === 'pix' || val === 'transfer');
+                if (recurrenceGrp) recurrenceGrp.classList.toggle('hidden', val !== 'pix' && val !== 'transfer');
+                if (transferGroup) transferGroup.classList.toggle('hidden', val !== 'transfer');
+                if (walletGroup) {
+                    const label = walletGroup.querySelector('label');
+                    if (label) label.textContent = val === 'transfer' ? 'Conta de Origem' : 'Conta / Carteira de Saída';
+                }
             });
         });
 
@@ -465,6 +477,9 @@ class App {
 
         // Initial population of profile switcher
         this.familyController.renderProfileSwitcher(this.config);
+        
+        // Initial population of workspace switcher
+        this.renderWorkspaceSwitcher();
 
         const closeProfileModal = document.getElementById('close-profile-modal');
         if (closeProfileModal) {
@@ -515,6 +530,20 @@ class App {
                 this._pendingAvatarBase64 = undefined;
             });
         }
+    }
+
+    renderWorkspaceSwitcher() {
+        const select = document.getElementById('workspace-selector');
+        if (!select || !this.authController.availableWorkspaces) return;
+
+        const workspaces = this.authController.availableWorkspaces;
+        const currentWsId = supabaseService.currentWorkspaceId;
+
+        select.innerHTML = workspaces.map(w => `
+            <option value="${w.workspace_id}" ${w.workspace_id === currentWsId ? 'selected' : ''}>
+                🏠 ${w.workspaces?.name || 'Meu Espaço'}
+            </option>
+        `).join('');
     }
 
     openProfileModal() {
