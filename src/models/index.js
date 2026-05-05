@@ -454,6 +454,7 @@ export class UserConfig {
         this.userData = {};
         this.workspace_id = null;
         this.simulations = [];
+        this.profileBudgets = {}; // { profileId: { Category: Amount } }
     }
 
     static fromJSON(json) {
@@ -472,6 +473,13 @@ export class UserConfig {
         config.userData = json.userData || {};
         config.workspace_id = json.workspace_id || null;
         config.simulations = (json.simulations || []).map(s => new SimulationEvent(s));
+        
+        config.profileBudgets = {};
+        if (json.profileBudgets) {
+            Object.keys(json.profileBudgets).forEach(pid => {
+                config.profileBudgets[pid] = Budget.normalizeBudgets(json.profileBudgets[pid]);
+            });
+        }
 
         return config;
     }
@@ -489,7 +497,8 @@ export class UserConfig {
             managedProfiles: this.managedProfiles,
             userData: this.userData,
             workspace_id: this.workspace_id,
-            simulations: this.simulations
+            simulations: this.simulations,
+            profileBudgets: this.profileBudgets
         };
     }
 }

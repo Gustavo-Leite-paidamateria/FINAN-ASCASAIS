@@ -195,6 +195,39 @@ class SupabaseService {
         if (error) throw error;
         return data;
     }
+
+    async createDefaultWorkspace() {
+        this.init();
+        const { data: { session } } = await this.client.auth.getSession();
+        if (!session) throw new Error("Usuário não autenticado");
+        const user = session.user;
+
+        // 1. Criar o Workspace
+        const { data: ws, error: wsError } = await this.client
+            .from('workspaces')
+            .insert({ name: 'Meu Espaço', owner_id: user.id })
+            .select()
+            .single();
+        
+        if (wsError) throw wsError;
+
+        // 2. Adicionar o Membro (Owner)
+        const { error: memError } = await this.client
+            .from('workspace_members')
+            .insert({ 
+                workspace_id: ws.id, 
+                user_id: user.id, 
+                role: 'owner' 
+            });
+        
+        if (memError) throw memError;
+
+        return {
+            workspace_id: ws.id,
+            role: 'owner',
+            workspaces: { name: ws.name, owner_id: ws.owner_id }
+        };
+    }
 }
 
 export const supabaseService = new SupabaseService();

@@ -5,31 +5,44 @@ import { formatCurrency, getMonthDateRange, SpiritualMentor } from '../utils/ind
 class PlanningController {
     constructor() {
         this.editingBillId = null;
+        this.selectedBudgetProfile = 'casal';
     }
 
     renderBudgets(config) {
         const container = document.getElementById('budget-config-list');
         if (!container) return;
 
+        const currentBudgets = this.selectedBudgetProfile === 'casal' 
+            ? config.budgets 
+            : (config.profileBudgets[this.selectedBudgetProfile] || Budget.getDefaultBudgets());
+
         container.innerHTML = '';
-        Object.keys(config.budgets).forEach(cat => {
+        Object.keys(currentBudgets).forEach(cat => {
             const div = document.createElement('div');
             div.className = 'config-item';
             div.innerHTML = `
                 <label>${cat}</label>
-                <input type="number" data-cat="${cat}" value="${config.budgets[cat]}" step="50">
+                <input type="number" data-cat="${cat}" value="${currentBudgets[cat]}" step="50">
             `;
             const inp = div.querySelector('input');
             inp.addEventListener('input', (e) => {
-                config.budgets[cat] = parseFloat(e.target.value) || 0;
-                const text = SpiritualMentor.getBudgetSetupInsight(config.budgets);
+                const newVal = parseFloat(e.target.value) || 0;
+                if (this.selectedBudgetProfile === 'casal') {
+                    config.budgets[cat] = newVal;
+                } else {
+                    if (!config.profileBudgets[this.selectedBudgetProfile]) {
+                        config.profileBudgets[this.selectedBudgetProfile] = Budget.getDefaultBudgets();
+                    }
+                    config.profileBudgets[this.selectedBudgetProfile][cat] = newVal;
+                }
+                const text = SpiritualMentor.getBudgetSetupInsight(this.selectedBudgetProfile === 'casal' ? config.budgets : config.profileBudgets[this.selectedBudgetProfile]);
                 SpiritualMentor.render('budget-setup-insight', text);
             });
             container.appendChild(div);
         });
 
         // Render Mentor Insight for Budget Setup
-        const insightText = SpiritualMentor.getBudgetSetupInsight(config.budgets);
+        const insightText = SpiritualMentor.getBudgetSetupInsight(this.selectedBudgetProfile === 'casal' ? config.budgets : config.profileBudgets[this.selectedBudgetProfile]);
         if (insightText) {
             SpiritualMentor.render('budget-setup-insight', insightText);
         }
@@ -37,9 +50,19 @@ class PlanningController {
 
     async saveBudgets(config) {
         const inputs = document.querySelectorAll('#budget-config-list input');
-        inputs.forEach(inp => {
-            config.budgets[inp.dataset.cat] = parseFloat(inp.value) || 0;
-        });
+        
+        if (this.selectedBudgetProfile === 'casal') {
+            inputs.forEach(inp => {
+                config.budgets[inp.dataset.cat] = parseFloat(inp.value) || 0;
+            });
+        } else {
+            if (!config.profileBudgets[this.selectedBudgetProfile]) {
+                config.profileBudgets[this.selectedBudgetProfile] = Budget.getDefaultBudgets();
+            }
+            inputs.forEach(inp => {
+                config.profileBudgets[this.selectedBudgetProfile][inp.dataset.cat] = parseFloat(inp.value) || 0;
+            });
+        }
         
         storageService.saveConfig(config);
         await supabaseService.saveConfig(config);
@@ -349,7 +372,26 @@ class PlanningController {
         breakevenText.textContent = `Seu custo fixo programado custa ${formatCurrency(total)}. Para o mês fechar no positivo, a sua meta mínima de ganhos tem que ser acima desse valor.`;
     }
 
+    renderProfileSelectors(config) {
+        const budgetSel = document.getElementById('budget-profile-selector');
+        if (!budgetSel) return;
+
+        const current = budgetSel.value;
+        let options = `
+            <option value="casal" ${current === 'casal' ? 'selected' : ''}>👫 Casal (Geral)</option>
+            <option value="eu" ${current === 'eu' ? 'selected' : ''}>👤 Eu</option>
+            <option value="esposa" ${current === 'esposa' ? 'selected' : ''}>👩 Ela</option>
+        `;
+
+        (config.managedProfiles || []).forEach(p => {
+            options += `<option value="${p.id}" ${current === p.id ? 'selected' : ''}>👤 ${p.name}</option>`;
+        });
+
+        budgetSel.innerHTML = options;
+    }
+
     render(config, transactions = []) {
+        this.renderProfileSelectors(config);
         this.renderBudgets(config);
         this.renderScheduledBills(config);
         this.renderCards(config);

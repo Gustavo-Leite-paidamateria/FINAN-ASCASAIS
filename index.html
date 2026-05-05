@@ -371,7 +371,17 @@
 
                 <!-- Setup Budgets -->
                 <div class="glass-card mt-4">
-                    <h3>Definir Orçamentos</h3>
+                    <div class="section-header">
+                        <h3>Definir Orçamentos</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.75rem; color: var(--text-sec);">Perfil:</span>
+                            <select id="budget-profile-selector" style="background: rgba(15,23,42,0.6); color: white; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 0.8rem;">
+                                <option value="casal">👫 Casal (Geral)</option>
+                                <option value="eu">👤 Eu</option>
+                                <option value="esposa">👩 Ela</option>
+                            </select>
+                        </div>
+                    </div>
                     <p class="subtitle" style="text-align: left; font-size: 0.8rem; margin-bottom: 12px;">Limite mensal que vocês desejam gastar em cada categoria.</p>
                     <div id="budget-setup-insight" style="margin-bottom: 20px;"></div>
                     <div id="budget-config-list" class="config-list">
@@ -464,14 +474,22 @@
                 </div>
 
                 <div class="glass-card" style="margin-bottom: 16px; padding: 16px;">
-                    <div style="display: flex; gap: 12px; align-items:flex-end;">
-                        <div class="input-group" style="margin-bottom:0; flex:1;">
+                    <div style="display: flex; gap: 12px; align-items:flex-end; flex-wrap: wrap;">
+                        <div class="input-group" style="margin-bottom:0; flex:1; min-width: 120px;">
                             <label style="font-size: 0.75rem;">De</label>
                             <input type="date" id="report-start-date" style="padding: 8px;">
                         </div>
-                        <div class="input-group" style="margin-bottom:0; flex:1;">
+                        <div class="input-group" style="margin-bottom:0; flex:1; min-width: 120px;">
                             <label style="font-size: 0.75rem;">Até</label>
                             <input type="date" id="report-end-date" style="padding: 8px;">
+                        </div>
+                        <div class="input-group" style="margin-bottom:0; width: 150px;">
+                            <label style="font-size: 0.75rem;">Perfil</label>
+                            <select id="report-profile-filter" style="padding: 8px; background: rgba(15,23,42,0.6); color: white; border-radius: 8px; border: 1px solid var(--glass-border); width: 100%;">
+                                <option value="all">👫 Casal</option>
+                                <option value="eu">👤 Eu</option>
+                                <option value="esposa">👩 Ela</option>
+                            </select>
                         </div>
                         <button id="generate-report-btn" class="btn-primary" style="padding: 8px 12px;"><i class="fa-solid fa-search"></i></button>
                         <button id="export-btn" class="btn-secondary" title="Exportar CSV"><i class="fa-solid fa-download"></i></button>

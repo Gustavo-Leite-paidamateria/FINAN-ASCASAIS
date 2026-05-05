@@ -23,6 +23,7 @@ class ReportsController {
                 if (endObj) endObj.value = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
             }
             
+            this.renderProfileSelectors();
             this.setupListeners();
             this.generateReport();
         } catch (e) {
@@ -39,9 +40,11 @@ class ReportsController {
 
             const startObj = document.getElementById('report-start-date');
             const endObj = document.getElementById('report-end-date');
+            const profileObj = document.getElementById('report-profile-filter');
             
             if (startObj) startObj.addEventListener('change', () => this.generateReport());
             if (endObj) endObj.addEventListener('change', () => this.generateReport());
+            if (profileObj) profileObj.addEventListener('change', () => this.generateReport());
         } catch (e) {
             console.error('Setup listeners error:', e);
         }
@@ -98,20 +101,22 @@ class ReportsController {
 
             const start = new Date(sDate);
             const end = new Date(eDate + "T23:59:59");
-            this.currentPeriod = { start, end };
+            const profile = document.getElementById('report-profile-filter')?.value || 'all';
+            
+            this.currentPeriod = { start, end, profile };
 
             const transactions = await supabaseService.fetchAllTransactions(start, end);
             console.log('Transactions found:', transactions?.length || 0);
             
-            this.renderAll(transactions || []);
+            this.renderAll(transactions || [], profile);
         } catch (err) {
             console.error('Error generating report:', err);
             notificationService.error('Erro', 'Falha ao buscar dados');
         }
     }
 
-    async renderAll(transactions) {
-        const summary = this.calculateSummary(transactions);
+    async renderAll(transactions, profile = 'all') {
+        const summary = this.calculateSummary(transactions, profile);
         
         this.renderSummary(summary);
         this.renderCompareChart(summary);
@@ -121,7 +126,7 @@ class ReportsController {
         this.renderTransactionsList(transactions);
     }
 
-    calculateSummary(transactions) {
+    calculateSummary(transactions, profile = 'all') {
         let income = 0, expense = 0;
         let me = 0, her = 0;
         let fixed = 0, variable = 0;
@@ -130,9 +135,17 @@ class ReportsController {
         const byPayee = {};
 
         transactions.forEach(t => {
-            const v = parseFloat(t.valor);
+            if (t.referencia === 'transferencia') return; // Pular transferências internas no relatório
+
             const meta = this.parseMeta(t.observacoes);
             const owner = meta.owner || t.owner || 'ambos';
+
+            // Filtragem por perfil
+            if (profile !== 'all' && owner !== 'ambos' && owner !== profile) {
+                return;
+            }
+
+            const v = parseFloat(t.valor);
             
             if (t.tipo === 'Receita') {
                 income += v;
@@ -424,10 +437,19 @@ class ReportsController {
     }
 
     renderTransactionsList(transactions) {
+        const profile = this.currentPeriod.profile || 'all';
+        const filtered = transactions.filter(t => {
+            if (t.referencia === 'transferencia') return false;
+            if (profile === 'all') return true;
+            const meta = this.parseMeta(t.observacoes);
+            const owner = meta.owner || t.owner || 'ambos';
+            return owner === 'ambos' || owner === profile;
+        });
+
         const container = document.getElementById('report-transactions-list');
         if (!container) return;
 
-        const sorted = [...transactions].sort((a, b) => new Date(b.data) - new Date(a.data));
+        const sorted = [...filtered].sort((a, b) => new Date(b.data) - new Date(a.data));
         
         if (sorted.length === 0) {
             container.innerHTML = '<div class="empty-state">Nenhuma transação no período.</div>';
@@ -597,6 +619,26 @@ class ReportsController {
     updateElement(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
+    }
+
+    renderProfileSelectors() {
+        const select = document.getElementById('report-profile-filter');
+        if (!select) return;
+
+        const config = window.app.config;
+        const currentVal = select.value;
+
+        let options = `
+            <option value="all" ${currentVal === 'all' ? 'selected' : ''}>👫 Casal</option>
+            <option value="eu" ${currentVal === 'eu' ? 'selected' : ''}>👤 Eu</option>
+            <option value="esposa" ${currentVal === 'esposa' ? 'selected' : ''}>👩 Ela</option>
+        `;
+
+        (config.managedProfiles || []).forEach(p => {
+            options += `<option value="${p.id}" ${currentVal === p.id ? 'selected' : ''}>👤 ${p.name}</option>`;
+        });
+
+        select.innerHTML = options;
     }
 }
 

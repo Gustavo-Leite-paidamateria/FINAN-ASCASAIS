@@ -113,6 +113,7 @@ class DashboardController {
         let income = 0, expense = 0, me = 0, her = 0, fixed = 0, variable = 0;
 
         this.transactions.forEach(t => {
+            if (t.referencia === 'transferencia') return;
             const amt = parseFloat(t.valor);
             if (t.tipo === 'Receita') {
                 income += amt;
@@ -329,11 +330,31 @@ class DashboardController {
     }
 
     renderBudgets(config) {
+        // Obter o perfil ativo no cabeçalho global
+        const activeProfile = window.app?.currentProfileId || 'casal';
+        
+        // Selecionar o conjunto de orçamentos correto
+        const budgetSet = activeProfile === 'casal' 
+            ? config.budgets 
+            : (config.profileBudgets[activeProfile] || config.budgets); // Fallback para casal se não tiver individual
+
         const totals = {};
+        const breakdown = {}; // { categoria: { eu: val, esposa: val, outros: val } }
+
         this.transactions
             .filter(t => t.tipo === 'Despesa')
             .forEach(t => { 
-                totals[t.categoria] = (totals[t.categoria] || 0) + parseFloat(t.valor); 
+                const amt = parseFloat(t.valor);
+                totals[t.categoria] = (totals[t.categoria] || 0) + amt; 
+                
+                if (!breakdown[t.categoria]) breakdown[t.categoria] = { eu: 0, esposa: 0, outros: 0 };
+                if (t.owner === 'eu') breakdown[t.categoria].eu += amt;
+                else if (t.owner === 'esposa') breakdown[t.categoria].esposa += amt;
+                else {
+                    // Se for 'ambos', dividimos para efeito visual no breakdown ou marcamos como outros
+                    breakdown[t.categoria].eu += amt / 2;
+                    breakdown[t.categoria].esposa += amt / 2;
+                }
             });
 
         const container = document.getElementById('budgets-list');
@@ -344,13 +365,14 @@ class DashboardController {
         let totalBudget = 0;
         let totalSpent = 0;
         
-        Object.keys(config.budgets).forEach(cat => {
-            totalBudget += config.budgets[cat];
+        Object.keys(budgetSet).forEach(cat => {
+            const limit = budgetSet[cat];
+            totalBudget += limit;
             const spent = totals[cat] || 0;
             totalSpent += spent;
 
-            if (cat === "Casa") return;
-            const limit = config.budgets[cat];
+            if (cat === "Casa" && activeProfile === 'casal') return; // Skip if it's the big one in couple view
+            
             const pct = Math.min((spent / limit) * 100, 100);
             const color = pct >= 100 ? 'danger' : pct > 75 ? 'warning' : 'safe';
             
@@ -359,13 +381,23 @@ class DashboardController {
                     `O gasto em ${cat} está em ${pct.toFixed(0)}% do limite!`);
             }
 
+            // Cálculo das larguras das sub-barras
+            const catBreakdown = breakdown[cat] || { eu: 0, esposa: 0 };
+            const mePct = spent > 0 ? (catBreakdown.eu / spent) * 100 : 0;
+            const herPct = spent > 0 ? (catBreakdown.esposa / spent) * 100 : 0;
+
             container.innerHTML += `
                 <div class="budget-item">
                     <div class="budget-info">
                         <span class="cat-name">${cat}</span>
                         <span class="val-left">${formatCurrency(spent)} / ${formatCurrency(limit)}</span>
                     </div>
-                    <div class="budget-track"><div class="budget-fill ${color}" style="width: ${pct}%"></div></div>
+                    <div class="budget-track">
+                        <div class="budget-fill ${color}" style="width: ${pct}%; display: flex;">
+                            <div style="height: 100%; width: ${mePct}%; background: rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.1);" title="Eu: ${formatCurrency(catBreakdown.eu)}"></div>
+                            <div style="height: 100%; width: ${herPct}%; background: rgba(0,0,0,0.1);" title="Ela: ${formatCurrency(catBreakdown.esposa)}"></div>
+                        </div>
+                    </div>
                 </div>
             `;
         });
@@ -374,6 +406,12 @@ class DashboardController {
         const totalEl = document.getElementById('budget-total-value');
         if (totalEl) {
             totalEl.textContent = formatCurrency(totalBudget);
+        }
+        
+        // Se estiver na visão de casal, atualizar o título para ser mais claro
+        const budgetTitle = document.querySelector('.budget-section h3');
+        if (budgetTitle) {
+            budgetTitle.textContent = activeProfile === 'casal' ? 'Orçamento do Casal' : `Orçamento Individual (${activeProfile === 'eu' ? 'Meu' : 'Dela'})`;
         }
     }
 

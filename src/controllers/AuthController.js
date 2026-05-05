@@ -163,10 +163,11 @@ class AuthController {
     async initializeApp() {
         try {
             // 1. Get Workspace
-            const workspaces = await supabaseService.getWorkspaces();
+            let workspaces = await supabaseService.getWorkspaces();
             if (!workspaces || workspaces.length === 0) {
-                notificationService.error('Erro', 'Workspace não encontrado. Contate o suporte.');
-                return;
+                console.log("Nenhum workspace encontrado, criando padrão...");
+                const newWs = await supabaseService.createDefaultWorkspace();
+                workspaces = [newWs];
             }
 
             // Seleção inteligente de Workspace (Persistência)

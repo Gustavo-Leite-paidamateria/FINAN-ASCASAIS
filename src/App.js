@@ -158,6 +158,14 @@ class App {
             saveBudgetsBtn.addEventListener('click', () => this.planningController.saveBudgets(this.config));
         }
 
+        const budgetProfileSelector = document.getElementById('budget-profile-selector');
+        if (budgetProfileSelector) {
+            budgetProfileSelector.addEventListener('change', () => {
+                this.planningController.selectedBudgetProfile = budgetProfileSelector.value;
+                this.planningController.renderBudgets(this.config);
+            });
+        }
+
         const addScheduledBtn = document.getElementById('add-scheduled-btn');
         if (addScheduledBtn) {
             addScheduledBtn.addEventListener('click', () => {
