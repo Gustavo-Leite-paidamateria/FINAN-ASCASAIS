@@ -218,7 +218,7 @@ class DashboardController {
         const projections = this.calculateProjections(config, metrics);
         const globalBalance = await this.calculateGlobalBalance(config);
         
-        this.updateElement('balance', formatCurrency(metrics.income - metrics.expense));
+        this.updateElement('real-projection-display', formatCurrency(projections.realProjection));
         this.updateElement('total-balance', formatCurrency(globalBalance));
         
         // Render wallet breakdown
@@ -227,7 +227,7 @@ class DashboardController {
         this.updateElement('total-income', formatCurrency(metrics.income));
         this.updateElement('total-expense', formatCurrency(metrics.expense));
         this.updateElement('stat-projection', formatCurrency(projections.statProjection));
-        this.updateElement('real-projection', formatCurrency(projections.realProjection));
+        // Removido duplicidade
         this.updateElement('projection-diff', formatCurrency(projections.totalCommitments));
 
         const savingRate = metrics.income > 0 
