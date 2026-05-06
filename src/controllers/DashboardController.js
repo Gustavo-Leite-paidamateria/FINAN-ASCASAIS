@@ -15,10 +15,18 @@ class DashboardController {
     }
 
     async loadData(config = null) {
+        // Garantir que a data está atualizada para o mês corrente na primeira carga
+        if (!this.initialized) {
+            this.currentDate = new Date();
+            this.initialized = true;
+        }
+
         const { start, end } = getMonthDateRange(this.currentDate);
+        console.log(`Carregando dados para o período: ${start.toISOString()} até ${end.toISOString()}`);
         
         try {
             this.transactions = await supabaseService.fetchTransactions(start, end);
+            console.log(`Transações carregadas: ${this.transactions.length}`);
             const cfg = config || window.app?.config;
             if (cfg) this.render(cfg);
         } catch (error) {

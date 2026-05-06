@@ -183,6 +183,7 @@ class SupabaseService {
             .from('workspace_members')
             .select('workspace_id, role, workspaces(name, owner_id)');
         if (error) throw error;
+        console.log("Workspaces encontrados para o usuário:", data);
         return data;
     }
 
