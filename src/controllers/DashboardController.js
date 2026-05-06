@@ -294,6 +294,16 @@ class DashboardController {
             `).join('');
     }
 
+    parseMeta(obs) {
+        if (!obs) return {};
+        if (typeof obs === 'object') return obs;
+        try {
+            return JSON.parse(obs);
+        } catch (e) {
+            return { owner: obs };
+        }
+    }
+
     async calculateWalletBalance(walletId, initialBalance) {
         const transactions = (this.allTransactions || []).filter(t => {
             const meta = this.parseMeta(t.observacoes);
