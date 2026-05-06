@@ -5,9 +5,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 class SupabaseService {
     constructor() {
-        this._client = null;
-        this._initialized = false;
+        this.client = null;
         this.currentWorkspaceId = null;
+        this.realtimeChannel = null;
+        this._initialized = false;
         this.currentProfileId = null; // null = Casal (padrão)
     }
 
@@ -236,6 +237,27 @@ class SupabaseService {
             role: 'owner',
             workspaces: { name: ws.name, owner_id: ws.owner_id }
         };
+    }
+
+    subscribeToChanges(callback) {
+        if (this.realtimeChannel) this.realtimeChannel.unsubscribe();
+
+        this.realtimeChannel = this.client
+            .channel('db-changes')
+            .on(
+                'postgres_changes', 
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'financeiro',
+                    filter: `workspace_id=eq.${this.currentWorkspaceId}`
+                }, 
+                (payload) => {
+                    console.log('Mudança detectada em tempo real:', payload);
+                    callback(payload);
+                }
+            )
+            .subscribe();
     }
 }
 

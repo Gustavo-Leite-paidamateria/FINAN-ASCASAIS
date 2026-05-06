@@ -197,6 +197,13 @@ class AuthController {
 
             setTimeout(() => this.checkAlerts(config), 1000);
 
+            // Iniciar Sincronização em Tempo Real
+            supabaseService.subscribeToChanges(() => {
+                window.app.dashboardController.loadData(window.app.config);
+                if (window.app.currentView === 'planning-view') window.app.planningController.render(window.app.config, window.app.dashboardController.transactions);
+                if (window.app.currentView === 'debts-view') window.app.debtController.render(window.app.config);
+            });
+
             if (!storageService.getTourCompleted()) {
                 setTimeout(() => window.app?.startTour(), 1500);
             }

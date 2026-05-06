@@ -222,23 +222,29 @@ class ReportsController {
     renderCompareChart(summary) {
         try {
             const ctx = document.getElementById('report-compare-chart');
-            console.log('Chart canvas:', ctx);
-            
             if (!ctx) return;
             
             if (this.charts.compare) this.charts.compare.destroy();
 
+            // Cores: Eu (Azul), Esposa (Rosa), Geral (Verde/Amarelo)
             this.charts.compare = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Receitas', 'Despesas', 'Fixo', 'Variável'],
+                    labels: ['Receitas', 'Despesas (Eu)', 'Despesas (Ela)', 'Fixo', 'Variável'],
                     datasets: [{ 
-                        data: [summary.income, summary.expense, summary.fixed, summary.variable], 
+                        data: [
+                            summary.income, 
+                            summary.me, 
+                            summary.her, 
+                            summary.fixed, 
+                            summary.variable
+                        ], 
                         backgroundColor: [
-                            'rgba(16, 185, 129, 0.8)',
-                            'rgba(244, 63, 94, 0.8)',
-                            'rgba(251, 191, 36, 0.8)',
-                            'rgba(59, 130, 246, 0.8)'
+                            'rgba(16, 185, 129, 0.8)', // Receitas (Verde)
+                            'rgba(59, 130, 246, 0.8)',  // Eu (Azul)
+                            'rgba(236, 72, 153, 0.8)',  // Ela (Rosa)
+                            'rgba(251, 191, 36, 0.8)',  // Fixo (Amarelo)
+                            'rgba(148, 163, 184, 0.8)'  // Variável (Cinza)
                         ], 
                         borderRadius: 6
                     }]
@@ -246,14 +252,27 @@ class ReportsController {
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` ${context.label}: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    },
                     scales: { 
-                        y: { beginAtZero: true, ticks: { color: '#94a3b8' } }, 
-                        x: { ticks: { color: '#94a3b8' } } 
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } } 
+                        }, 
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 } } 
+                        } 
                     }
                 }
             });
-            console.log('Chart created');
         } catch (e) {
             console.error('renderCompareChart error:', e);
         }
