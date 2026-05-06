@@ -202,6 +202,8 @@ class SupabaseService {
         if (!session) throw new Error("Usuário não autenticado");
         const user = session.user;
 
+        console.log("Iniciando criação de workspace padrão para:", user.email);
+
         // 1. Criar o Workspace
         const { data: ws, error: wsError } = await this.client
             .from('workspaces')
@@ -209,7 +211,10 @@ class SupabaseService {
             .select()
             .single();
         
-        if (wsError) throw wsError;
+        if (wsError) {
+            console.error("Erro ao criar entrada na tabela workspaces:", wsError);
+            throw new Error(`Erro na tabela workspaces: ${wsError.message}`);
+        }
 
         // 2. Adicionar o Membro (Owner)
         const { error: memError } = await this.client
@@ -220,7 +225,10 @@ class SupabaseService {
                 role: 'owner' 
             });
         
-        if (memError) throw memError;
+        if (memError) {
+            console.error("Erro ao criar entrada na tabela workspace_members:", memError);
+            throw new Error(`Erro na tabela workspace_members: ${memError.message}`);
+        }
 
         return {
             workspace_id: ws.id,

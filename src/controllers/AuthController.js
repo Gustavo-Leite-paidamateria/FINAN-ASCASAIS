@@ -202,7 +202,8 @@ class AuthController {
             }
         } catch (e) {
             console.error('Initialization error:', e);
-            notificationService.error('Erro', 'Falha ao carregar workspace.');
+            const errorMsg = e.message || 'Erro desconhecido';
+            notificationService.error('Erro', `Falha ao carregar workspace: ${errorMsg}`);
         }
     }
 
