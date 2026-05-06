@@ -14,10 +14,26 @@ export default class FamilyController {
 
     async renderMembers() {
         const container = document.getElementById('members-list');
+        const shareContainer = document.getElementById('share-workspace-info');
         if (!container) return;
 
+        // Mostrar o ID do Workspace atual para compartilhamento
+        if (shareContainer) {
+            shareContainer.innerHTML = `
+                <div class="share-box">
+                    <p style="font-size: 0.8rem; color: var(--text-sec);">Código do seu Espaço (Envie para quem quiser convidar):</p>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <input type="text" value="${supabaseService.currentWorkspaceId}" readonly style="flex: 1; font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.2);">
+                        <button onclick="navigator.clipboard.writeText('${supabaseService.currentWorkspaceId}'); window.app.notificationService.success('Copiado!', 'Envie este código para seu convidado.')" class="btn-primary" style="padding: 0 15px;">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
         try {
-            const members = await supabaseService.getWorkspaces(); // This returns memberships
+            const members = await supabaseService.getWorkspaces();
             container.innerHTML = members.map(m => `
                 <div class="config-item">
                     <div class="config-info">
@@ -28,6 +44,38 @@ export default class FamilyController {
             `).join('');
         } catch (e) {
             console.error('Error rendering members:', e);
+        }
+    }
+
+    async joinExistingWorkspace() {
+        const idInput = document.getElementById('join-workspace-id');
+        const workspaceId = idInput?.value?.trim();
+        if (!workspaceId) return;
+
+        notificationService.info('Aguarde', 'Entrando no espaço...');
+
+        try {
+            const { data: { user } } = await supabaseService.client.auth.getUser();
+            
+            // Adicionar-se como membro
+            const { error } = await supabaseService.client
+                .from('workspace_members')
+                .insert({
+                    workspace_id: workspaceId,
+                    user_id: user.id,
+                    role: 'member'
+                });
+
+            if (error) throw error;
+
+            notificationService.success('Sucesso!', 'Você agora faz parte deste espaço.');
+            idInput.value = '';
+            
+            // Recarregar app para assumir o novo contexto
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            console.error('Error joining workspace:', e);
+            notificationService.error('Erro', 'Código inválido ou sem permissão.');
         }
     }
 

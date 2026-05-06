@@ -79,6 +79,7 @@
                     <button id="theme-dark" class="active" title="Tema Escuro"><i class="fa-solid fa-moon"></i></button>
                     <button id="theme-light" title="Tema Claro"><i class="fa-solid fa-sun"></i></button>
                 </div>
+                <button id="header-family-btn" onclick="window.app.openFamilyManager()" class="btn-icon" title="Gestão Familiar/Convites"><i class="fa-solid fa-user-plus"></i></button>
                 <button id="help-btn" class="btn-icon" title="Ajuda"><i class="fa-solid fa-circle-question"></i></button>
                 <button id="fab-add" class="btn-icon plus-top" style="background: var(--accent); color: white;"><i class="fa-solid fa-plus"></i></button>
                 <button id="logout-btn" class="btn-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
@@ -1318,14 +1319,30 @@
             </div>
 
             <div id="family-content-members">
-                <div class="input-group">
+                <div id="share-workspace-info" style="margin-bottom: 20px;"></div>
+                
+                <div class="config-section">
+                    <h4 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--accent);">
+                        <i class="fa-solid fa-plus-circle"></i> Entrar em outro Espaço
+                    </h4>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="join-workspace-id" placeholder="Cole o código do espaço aqui..." style="flex: 1; font-size: 0.8rem;">
+                        <button onclick="window.app.familyController.joinExistingWorkspace()" class="btn-primary">Entrar</button>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 0.9rem; margin-top: 24px; margin-bottom: 12px; color: var(--accent);">
+                    <i class="fa-solid fa-users"></i> Membros Atuais
+                </h4>
+                <div id="members-list"></div>
+                
+                <div class="input-group mt-4">
                     <label>Convidar por E-mail</label>
                     <div style="display: flex; gap: 8px;">
                         <input type="email" id="invite-email" placeholder="email@exemplo.com" class="w-full">
                         <button onclick="window.app.familyController.sendInvite()" class="btn-primary">Enviar</button>
                     </div>
                 </div>
-                <div id="members-list" class="config-list mt-4">
                     <!-- Members via JS -->
                 </div>
             </div>

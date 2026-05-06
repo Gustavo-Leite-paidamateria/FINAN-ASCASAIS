@@ -830,8 +830,15 @@ class App {
     }
 
     openFamilyManager() {
-        this.familyController.render(this.config);
-        document.getElementById('family-modal')?.classList.remove('hidden');
+        console.log("Abrindo Gestor Familiar...");
+        const modal = document.getElementById('family-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex'; // Garantir que o display flex do overlay funcione
+            this.familyController.render(this.config);
+        } else {
+            console.error("Erro: Modal de família não encontrado no HTML");
+        }
     }
 
     setupImport() {
