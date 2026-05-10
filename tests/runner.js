@@ -3,7 +3,10 @@ import {
     Budget,
     CATEGORIES,
     ScheduledBill,
-    UserConfig
+    UserConfig,
+    Payee,
+    ManagedProfile,
+    SimulationEvent
 } from '../src/models/index.js';
 import { storageService, supabaseService } from '../src/services/index.js';
 import DashboardController from '../src/controllers/DashboardController.js';
@@ -34,6 +37,7 @@ const TestRunner = {
         await this.testUtils();
         await this.testSupabaseInsertNormalization();
         await this.testDashboardAutoProcessBills();
+        await this.testNewModels();
         await this.testDOM();
         await this.testNavigation();
         await this.testTheme();
@@ -92,13 +96,13 @@ const TestRunner = {
         );
 
         const legacyConfig = UserConfig.fromJSON({
-            budgets: { Moradia: 2200, ServiÃ§os: 300, Mercado: 900 }
+            budgets: { "Moradia": 2200, "Serviços": 300, "Mercado": 900 }
         });
 
         this.assert(legacyConfig.budgets.Casa === 2200, 'Legacy Moradia budget migrates to Casa');
         this.assert(
-            !Object.prototype.hasOwnProperty.call(legacyConfig.budgets, 'ServiÃ§os'),
-            'Legacy ServiÃ§os budget is removed'
+            !Object.prototype.hasOwnProperty.call(legacyConfig.budgets, 'Serviços'),
+            'Legacy Serviços budget is removed'
         );
         this.assert(legacyConfig.budgets.Mercado === 900, 'Existing recognized budget is preserved');
     },
@@ -216,6 +220,23 @@ const TestRunner = {
         supabaseService.insertTransaction = originalInsert;
         supabaseService.saveConfig = originalSaveConfig;
         storageService.saveConfig = originalStorageSave;
+    },
+
+    async testNewModels() {
+        console.log('Testing new models (Payee, ManagedProfile, SimulationEvent)...');
+        
+        const payee = new Payee({ name: 'Mercado', defaultCategory: 'Alimentação' });
+        this.assert(payee.name === 'Mercado', 'Payee initialization');
+        this.assert(payee.defaultCategory === 'Alimentação', 'Payee default category');
+
+        const profile = new ManagedProfile({ name: 'Filho', color: '#000' });
+        this.assert(profile.name === 'Filho', 'ManagedProfile initialization');
+        this.assert(profile.color === '#000', 'ManagedProfile color');
+
+        const sim = new SimulationEvent({ nome: 'Carro', valor: 50000, parcelas: 48 });
+        this.assert(sim.nome === 'Carro', 'SimulationEvent initialization');
+        this.assert(sim.valor === 50000, 'SimulationEvent value');
+        this.assert(sim.parcelas === 48, 'SimulationEvent installments');
     },
 
     async testDOM() {

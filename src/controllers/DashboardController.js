@@ -439,6 +439,10 @@ class DashboardController {
     }
 
     renderCategoryChart() {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregado.');
+            return;
+        }
         const ctx = document.getElementById('category-chart');
         if (!ctx) return;
 
@@ -487,6 +491,10 @@ class DashboardController {
     }
 
     renderDailyChart() {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregado.');
+            return;
+        }
         const ctx = document.getElementById('daily-chart');
         if (!ctx) return;
 

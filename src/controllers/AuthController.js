@@ -179,6 +179,7 @@ class AuthController {
 
             // Guardar a lista para o seletor na UI
             this.availableWorkspaces = workspaces;
+            window.app?.renderWorkspaceSwitcher();
             
             // 2. Load Config within Workspace
             const config = await this.loadConfig();

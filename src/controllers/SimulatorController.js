@@ -9,15 +9,19 @@ export default class SimulatorController {
     }
 
     async render(config) {
-        const container = document.getElementById('simulator-view');
-        if (!container || container.classList.contains('hidden')) return;
+        try {
+            const container = document.getElementById('simulator-view');
+            if (!container || container.classList.contains('hidden')) return;
 
-        const baseData = await this.calculateBaseScenario(config);
-        const simulatedData = this.applySimulations(config, baseData);
+            const baseData = await this.calculateBaseScenario(config);
+            const simulatedData = this.applySimulations(config, baseData);
 
-        this.renderChart(baseData, simulatedData);
-        this.renderSimulationsList(config);
-        this.updateIndicators(baseData, simulatedData);
+            this.renderChart(baseData, simulatedData);
+            this.renderSimulationsList(config);
+            this.updateIndicators(baseData, simulatedData);
+        } catch (error) {
+            console.error("Erro ao renderizar SimulatorController:", error);
+        }
     }
 
     async calculateBaseScenario(config) {
@@ -143,6 +147,11 @@ export default class SimulatorController {
     }
 
     renderChart(baseData, simulatedData) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregado.');
+            return;
+        }
+
         const ctx = document.getElementById('simulator-chart');
         if (!ctx) return;
 
@@ -280,46 +289,61 @@ export default class SimulatorController {
     }
 
     async addSimulation(config) {
-        const nome = document.getElementById('sim-name')?.value;
-        const valor = parseFloat(document.getElementById('sim-amount')?.value);
-        const tipo = document.getElementById('sim-type')?.value;
-        const parcelas = parseInt(document.getElementById('sim-installments')?.value) || 1;
-        const data_inicio = document.getElementById('sim-date')?.value;
+        try {
+            const nome = document.getElementById('sim-name')?.value;
+            const valor = parseFloat(document.getElementById('sim-amount')?.value);
+            const tipo = document.getElementById('sim-type')?.value;
+            const parcelas = parseInt(document.getElementById('sim-installments')?.value) || 1;
+            const data_inicio = document.getElementById('sim-date')?.value;
 
-        if (!nome || isNaN(valor) || !data_inicio) {
-            notificationService.error('Erro', 'Preencha todos os campos da simulação');
-            return;
+            if (!nome || isNaN(valor) || !data_inicio) {
+                notificationService.error('Erro', 'Preencha todos os campos da simulação');
+                return;
+            }
+
+            const newSim = new SimulationEvent({ nome, valor, tipo, parcelas, data_inicio });
+            config.simulations.push(newSim);
+
+            await supabaseService.saveConfig(config);
+            notificationService.success('Simulação', 'Cenário adicionado com sucesso');
+            
+            // Reset form
+            document.getElementById('sim-name').value = '';
+            document.getElementById('sim-amount').value = '';
+            document.getElementById('sim-installments').value = '1';
+            
+            this.render(config);
+        } catch (error) {
+            console.error("Erro ao adicionar simulação:", error);
+            notificationService.error('Erro', 'Falha ao adicionar simulação.');
         }
-
-        const newSim = new SimulationEvent({ nome, valor, tipo, parcelas, data_inicio });
-        config.simulations.push(newSim);
-
-        await supabaseService.saveConfig(config);
-        notificationService.success('Simulação', 'Cenário adicionado com sucesso');
-        
-        // Reset form
-        document.getElementById('sim-name').value = '';
-        document.getElementById('sim-amount').value = '';
-        document.getElementById('sim-installments').value = '1';
-        
-        this.render(config);
     }
 
     async toggleSimulation(id) {
-        const config = window.app.config;
-        const sim = config.simulations.find(s => s.id === id);
-        if (sim) {
-            sim.ativa = !sim.ativa;
-            await supabaseService.saveConfig(config);
-            this.render(config);
+        try {
+            const config = window.app.config;
+            const sim = config.simulations.find(s => s.id === id);
+            if (sim) {
+                sim.ativa = !sim.ativa;
+                await supabaseService.saveConfig(config);
+                this.render(config);
+            }
+        } catch (error) {
+            console.error("Erro ao alternar simulação:", error);
+            notificationService.error('Erro', 'Falha ao atualizar simulação.');
         }
     }
 
     async deleteSimulation(id) {
         if (!confirm('Deseja excluir esta simulação?')) return;
-        const config = window.app.config;
-        config.simulations = config.simulations.filter(s => s.id !== id);
-        await supabaseService.saveConfig(config);
-        this.render(config);
+        try {
+            const config = window.app.config;
+            config.simulations = config.simulations.filter(s => s.id !== id);
+            await supabaseService.saveConfig(config);
+            this.render(config);
+        } catch (error) {
+            console.error("Erro ao excluir simulação:", error);
+            notificationService.error('Erro', 'Falha ao excluir simulação.');
+        }
     }
 }

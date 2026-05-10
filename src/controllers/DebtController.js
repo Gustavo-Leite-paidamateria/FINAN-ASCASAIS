@@ -113,28 +113,33 @@ class DebtController {
     }
 
     async addDebt(config) {
-        const name = document.getElementById('debt-name')?.value?.trim();
-        const type = document.querySelector('input[name="debt-type"]:checked')?.value || 'Outros';
-        const total = parseFloat(document.getElementById('debt-total')?.value) || 0;
-        const paid = parseFloat(document.getElementById('debt-paid')?.value) || 0;
-        const installments = parseInt(document.getElementById('debt-installments')?.value) || 1;
-        const dueDay = parseInt(document.getElementById('debt-due-day')?.value) || null;
-        const startDate = document.getElementById('debt-start-date')?.value || null;
-        const creditor = document.getElementById('debt-creditor')?.value?.trim() || '';
+        try {
+            const name = document.getElementById('debt-name')?.value?.trim();
+            const type = document.querySelector('input[name="debt-type"]:checked')?.value || 'Outros';
+            const total = parseFloat(document.getElementById('debt-total')?.value) || 0;
+            const paid = parseFloat(document.getElementById('debt-paid')?.value) || 0;
+            const installments = parseInt(document.getElementById('debt-installments')?.value) || 1;
+            const dueDay = parseInt(document.getElementById('debt-due-day')?.value) || null;
+            const startDate = document.getElementById('debt-start-date')?.value || null;
+            const creditor = document.getElementById('debt-creditor')?.value?.trim() || '';
 
-        if (name && total > 0) {
-            const debt = new Debt({ name, type, total, paid, installments, dueDay, startDate, creditor });
-            config.debts.push(debt);
-            
-            const bill = debt.toScheduledBill();
-            config.scheduledBills.push(bill);
-            
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            
-            document.getElementById('debt-modal')?.classList.add('hidden');
-            this.render(config);
-            notificationService.success('Sucesso', 'Dívida adicionada! Conta programada criada.');
+            if (name && total > 0) {
+                const debt = new Debt({ name, type, total, paid, installments, dueDay, startDate, creditor });
+                config.debts.push(debt);
+                
+                const bill = debt.toScheduledBill();
+                config.scheduledBills.push(bill);
+                
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                
+                document.getElementById('debt-modal')?.classList.add('hidden');
+                this.render(config);
+                notificationService.success('Sucesso', 'Dívida adicionada! Conta programada criada.');
+            }
+        } catch (error) {
+            console.error("Erro ao adicionar dívida:", error);
+            notificationService.error('Erro', 'Falha ao adicionar dívida.');
         }
     }
 
@@ -199,15 +204,20 @@ class DebtController {
     }
 
     async deleteDebt(config, id) {
-        const debt = config.debts.find(d => d.id === id);
         if (confirm('Deseja remover esta dívida?')) {
-            config.debts = config.debts.filter(d => d.id !== id);
-            if (debt) {
-                config.scheduledBills = config.scheduledBills.filter(b => b.name !== '[Dívida] ' + debt.name);
+            try {
+                const debt = config.debts.find(d => d.id === id);
+                config.debts = config.debts.filter(d => d.id !== id);
+                if (debt) {
+                    config.scheduledBills = config.scheduledBills.filter(b => b.name !== '[Dívida] ' + debt.name);
+                }
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.render(config);
+            } catch (error) {
+                console.error("Erro ao remover dívida:", error);
+                notificationService.error('Erro', 'Falha ao remover dívida.');
             }
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.render(config);
         }
     }
 }

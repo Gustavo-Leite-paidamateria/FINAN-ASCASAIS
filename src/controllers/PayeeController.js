@@ -34,45 +34,55 @@ export default class PayeeController {
     }
 
     async add(config) {
-        const name = document.getElementById('payee-new-name')?.value?.trim();
-        const doc = document.getElementById('payee-new-doc')?.value?.trim();
-        const cat = document.getElementById('payee-new-cat')?.value;
+        try {
+            const name = document.getElementById('payee-new-name')?.value?.trim();
+            const doc = document.getElementById('payee-new-doc')?.value?.trim();
+            const cat = document.getElementById('payee-new-cat')?.value;
 
-        if (!name) {
-            notificationService.warning('Aviso', 'O nome do favorecido é obrigatório.');
-            return;
-        }
+            if (!name) {
+                notificationService.warning('Aviso', 'O nome do favorecido é obrigatório.');
+                return;
+            }
 
-        const newPayee = new Payee({
-            name,
-            document: doc,
-            defaultCategory: cat
-        });
+            const newPayee = new Payee({
+                name,
+                document: doc,
+                defaultCategory: cat
+            });
 
-        config.payees.push(newPayee);
-        
-        const success = await supabaseService.saveConfig(config);
-        if (success) {
-            notificationService.success('Sucesso', 'Favorecido cadastrado.');
-            document.getElementById('payee-form')?.reset();
-            this.renderManager(config);
-            this.updateAutocomplete(config);
-        } else {
-            notificationService.error('Erro', 'Não foi possível salvar.');
+            config.payees.push(newPayee);
+            
+            const success = await supabaseService.saveConfig(config);
+            if (success) {
+                notificationService.success('Sucesso', 'Favorecido cadastrado.');
+                document.getElementById('payee-form')?.reset();
+                this.renderManager(config);
+                this.updateAutocomplete(config);
+            } else {
+                notificationService.error('Erro', 'Não foi possível salvar.');
+            }
+        } catch (error) {
+            console.error("Erro ao adicionar favorecido:", error);
+            notificationService.error('Erro', 'Falha ao adicionar favorecido.');
         }
     }
 
     async delete(id) {
         if (!confirm('Deseja excluir este favorecido?')) return;
 
-        const config = window.app.config;
-        config.payees = config.payees.filter(p => p.id !== id);
+        try {
+            const config = window.app.config;
+            config.payees = config.payees.filter(p => p.id !== id);
 
-        const success = await supabaseService.saveConfig(config);
-        if (success) {
-            notificationService.success('Sucesso', 'Favorecido removido.');
-            this.renderManager(config);
-            this.updateAutocomplete(config);
+            const success = await supabaseService.saveConfig(config);
+            if (success) {
+                notificationService.success('Sucesso', 'Favorecido removido.');
+                this.renderManager(config);
+                this.updateAutocomplete(config);
+            }
+        } catch (error) {
+            console.error("Erro ao excluir favorecido:", error);
+            notificationService.error('Erro', 'Falha ao excluir favorecido.');
         }
     }
 
@@ -90,13 +100,18 @@ export default class PayeeController {
     }
 
     async ensurePayee(config, name) {
-        let payee = this.getPayeeByName(config, name);
-        if (!payee && name.trim() !== '') {
-            payee = new Payee({ name: name.trim() });
-            config.payees.push(payee);
-            await supabaseService.saveConfig(config);
-            this.updateAutocomplete(config);
+        try {
+            let payee = this.getPayeeByName(config, name);
+            if (!payee && name.trim() !== '') {
+                payee = new Payee({ name: name.trim() });
+                config.payees.push(payee);
+                await supabaseService.saveConfig(config);
+                this.updateAutocomplete(config);
+            }
+            return payee;
+        } catch (error) {
+            console.error("Erro ao garantir favorecido:", error);
+            return null;
         }
-        return payee;
     }
 }

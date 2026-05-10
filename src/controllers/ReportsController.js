@@ -221,6 +221,10 @@ class ReportsController {
 
     renderCompareChart(summary) {
         try {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js não carregado.');
+                return;
+            }
             const ctx = document.getElementById('report-compare-chart');
             if (!ctx) return;
             
@@ -279,6 +283,10 @@ class ReportsController {
     }
 
     renderCategoryChart(transactions) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregado.');
+            return;
+        }
         const ctx = document.getElementById('report-category-chart');
         if (!ctx) return;
         
@@ -387,6 +395,10 @@ class ReportsController {
     }
 
     async renderEvolutionChart() {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregado.');
+            return;
+        }
         const ctx = document.getElementById('report-evolution-chart');
         if (!ctx) return;
         

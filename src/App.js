@@ -1,5 +1,5 @@
 import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController } from './controllers/index.js';
-import { storageService, notificationService } from './services/index.js';
+import { storageService, notificationService, supabaseService } from './services/index.js';
 import { router } from './routes/router.js';
 import { UserConfig } from './models/index.js';
 

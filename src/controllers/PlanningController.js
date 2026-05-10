@@ -49,25 +49,30 @@ class PlanningController {
     }
 
     async saveBudgets(config) {
-        const inputs = document.querySelectorAll('#budget-config-list input');
-        
-        if (this.selectedBudgetProfile === 'casal') {
-            inputs.forEach(inp => {
-                config.budgets[inp.dataset.cat] = parseFloat(inp.value) || 0;
-            });
-        } else {
-            if (!config.profileBudgets[this.selectedBudgetProfile]) {
-                config.profileBudgets[this.selectedBudgetProfile] = Budget.getDefaultBudgets();
+        try {
+            const inputs = document.querySelectorAll('#budget-config-list input');
+            
+            if (this.selectedBudgetProfile === 'casal') {
+                inputs.forEach(inp => {
+                    config.budgets[inp.dataset.cat] = parseFloat(inp.value) || 0;
+                });
+            } else {
+                if (!config.profileBudgets[this.selectedBudgetProfile]) {
+                    config.profileBudgets[this.selectedBudgetProfile] = Budget.getDefaultBudgets();
+                }
+                inputs.forEach(inp => {
+                    config.profileBudgets[this.selectedBudgetProfile][inp.dataset.cat] = parseFloat(inp.value) || 0;
+                });
             }
-            inputs.forEach(inp => {
-                config.profileBudgets[this.selectedBudgetProfile][inp.dataset.cat] = parseFloat(inp.value) || 0;
-            });
+            
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+            
+            notificationService.success('Sucesso', 'Orçamentos salvos com sucesso!');
+        } catch (error) {
+            console.error("Erro ao salvar orçamentos:", error);
+            notificationService.error('Erro', 'Falha ao salvar orçamentos.');
         }
-        
-        storageService.saveConfig(config);
-        await supabaseService.saveConfig(config);
-        
-        notificationService.success('Sucesso', 'Orçamentos salvos com sucesso!');
     }
 
     renderScheduledBills(config) {
@@ -176,27 +181,37 @@ class PlanningController {
     }
 
     async addCard(config) {
-        const name = document.getElementById('card-name')?.value?.trim();
-        const closing = parseInt(document.getElementById('card-closing')?.value);
-        const due = parseInt(document.getElementById('card-due')?.value);
-        const limit = parseFloat(document.getElementById('card-limit')?.value) || 0;
+        try {
+            const name = document.getElementById('card-name')?.value?.trim();
+            const closing = parseInt(document.getElementById('card-closing')?.value);
+            const due = parseInt(document.getElementById('card-due')?.value);
+            const limit = parseFloat(document.getElementById('card-limit')?.value) || 0;
 
-        if (name && closing && due) {
-            config.cards.push(new Card({ name, closingDay: closing, dueDay: due, limit }));
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.renderCards(config);
-            document.getElementById('card-modal')?.classList.add('hidden');
-            notificationService.success('Sucesso', 'Cartão adicionado!');
+            if (name && closing && due) {
+                config.cards.push(new Card({ name, closingDay: closing, dueDay: due, limit }));
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.renderCards(config);
+                document.getElementById('card-modal')?.classList.add('hidden');
+                notificationService.success('Sucesso', 'Cartão adicionado!');
+            }
+        } catch (error) {
+            console.error("Erro ao adicionar cartão:", error);
+            notificationService.error('Erro', 'Falha ao adicionar cartão.');
         }
     }
 
     async deleteCard(config, id) {
         if (confirm('Deseja remover este cartão?')) {
-            config.cards = config.cards.filter(c => c.id !== id);
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.renderCards(config);
+            try {
+                config.cards = config.cards.filter(c => c.id !== id);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.renderCards(config);
+            } catch (error) {
+                console.error("Erro ao excluir cartão:", error);
+                notificationService.error('Erro', 'Falha ao excluir cartão.');
+            }
         }
     }
 
@@ -249,63 +264,78 @@ class PlanningController {
     }
 
     async addWallet(config) {
-        const name = document.getElementById('wallet-name')?.value?.trim();
-        const bal = parseFloat(document.getElementById('wallet-balance')?.value) || 0;
-        const typeEl = document.querySelector('input[name="wallet-type"]:checked');
-        const type = typeEl ? typeEl.value : 'conta_corrente';
+        try {
+            const name = document.getElementById('wallet-name')?.value?.trim();
+            const bal = parseFloat(document.getElementById('wallet-balance')?.value) || 0;
+            const typeEl = document.querySelector('input[name="wallet-type"]:checked');
+            const type = typeEl ? typeEl.value : 'conta_corrente';
 
-        if (name) {
-            config.wallets.push(new Wallet({ name, initialBalance: bal, type }));
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.renderWallets(config, []);
-            document.getElementById('wallet-modal')?.classList.add('hidden');
-            notificationService.success('Sucesso', 'Conta adicionada!');
+            if (name) {
+                config.wallets.push(new Wallet({ name, initialBalance: bal, type }));
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.renderWallets(config, []);
+                document.getElementById('wallet-modal')?.classList.add('hidden');
+                notificationService.success('Sucesso', 'Conta adicionada!');
+            }
+        } catch (error) {
+            console.error("Erro ao adicionar conta:", error);
+            notificationService.error('Erro', 'Falha ao adicionar conta.');
         }
     }
 
     async deleteWallet(config, id) {
         if (confirm('Deseja remover esta conta? As transações antigas não serão afetadas.')) {
-            config.wallets = config.wallets.filter(w => w.id !== id);
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.renderWallets(config, []);
+            try {
+                config.wallets = config.wallets.filter(w => w.id !== id);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.renderWallets(config, []);
+            } catch (error) {
+                console.error("Erro ao excluir conta:", error);
+                notificationService.error('Erro', 'Falha ao excluir conta.');
+            }
         }
     }
 
     async addScheduledBill(config) {
-        const name = document.getElementById('sched-name')?.value?.trim();
-        const amount = parseFloat(document.getElementById('sched-amount')?.value);
-        const day = parseInt(document.getElementById('sched-day')?.value);
-        const category = document.getElementById('sched-category')?.value || 'Outros';
-        const payMethodEle = document.querySelector('input[name="sched-pay-method"]:checked');
-        const payMethod = payMethodEle ? payMethodEle.value : 'pix';
-        const ownerEle = document.querySelector('input[name="sched-owner"]:checked');
-        const owner = ownerEle ? ownerEle.value : 'ambos';
-        const walletId = document.getElementById('sched-wallet')?.value;
-        const cardId = document.getElementById('sched-card')?.value;
+        try {
+            const name = document.getElementById('sched-name')?.value?.trim();
+            const amount = parseFloat(document.getElementById('sched-amount')?.value);
+            const day = parseInt(document.getElementById('sched-day')?.value);
+            const category = document.getElementById('sched-category')?.value || 'Outros';
+            const payMethodEle = document.querySelector('input[name="sched-pay-method"]:checked');
+            const payMethod = payMethodEle ? payMethodEle.value : 'pix';
+            const ownerEle = document.querySelector('input[name="sched-owner"]:checked');
+            const owner = ownerEle ? ownerEle.value : 'ambos';
+            const walletId = document.getElementById('sched-wallet')?.value;
+            const cardId = document.getElementById('sched-card')?.value;
 
-        const recurrenceType = document.querySelector('input[name="sched-recurrence"]:checked');
-        const isMonthly = !recurrenceType || recurrenceType.value === 'monthly';
-        const count = isMonthly ? null : (parseInt(document.getElementById('sched-count')?.value) || null);
-        const startDate = isMonthly ? null : (document.getElementById('sched-start-date')?.value || null);
-        const endDate = isMonthly ? null : (document.getElementById('sched-end-date')?.value || null);
+            const recurrenceType = document.querySelector('input[name="sched-recurrence"]:checked');
+            const isMonthly = !recurrenceType || recurrenceType.value === 'monthly';
+            const count = isMonthly ? null : (parseInt(document.getElementById('sched-count')?.value) || null);
+            const startDate = isMonthly ? null : (document.getElementById('sched-start-date')?.value || null);
+            const endDate = isMonthly ? null : (document.getElementById('sched-end-date')?.value || null);
 
-        if (name && amount && day) {
-            const bill = new ScheduledBill({
-                name, amount, category, dueDay: day, isMonthly, count, startDate, endDate,
-                payMethod, walletId: payMethod === 'pix' ? walletId : null,
-                cardId: payMethod === 'card' ? cardId : null, owner
-            });
-            
-            config.scheduledBills.push(bill);
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            
-            this.renderScheduledBills(config);
-            this.renderBreakEven(config);
-            document.getElementById('scheduled-bill-modal')?.classList.add('hidden');
-            notificationService.success('Sucesso', 'Conta programada adicionada!');
+            if (name && amount && day) {
+                const bill = new ScheduledBill({
+                    name, amount, category, dueDay: day, isMonthly, count, startDate, endDate,
+                    payMethod, walletId: payMethod === 'pix' ? walletId : null,
+                    cardId: payMethod === 'card' ? cardId : null, owner
+                });
+                
+                config.scheduledBills.push(bill);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                
+                this.renderScheduledBills(config);
+                this.renderBreakEven(config);
+                document.getElementById('scheduled-bill-modal')?.classList.add('hidden');
+                notificationService.success('Sucesso', 'Conta programada adicionada!');
+            }
+        } catch (error) {
+            console.error("Erro ao adicionar conta programada:", error);
+            notificationService.error('Erro', 'Falha ao adicionar conta programada.');
         }
     }
 
@@ -346,11 +376,16 @@ class PlanningController {
     }
 
     async deleteBill(config, id) {
-        config.scheduledBills = config.scheduledBills.filter(b => b.id !== id);
-        storageService.saveConfig(config);
-        await supabaseService.saveConfig(config);
-        this.renderScheduledBills(config);
-        this.renderBreakEven(config);
+        try {
+            config.scheduledBills = config.scheduledBills.filter(b => b.id !== id);
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+            this.renderScheduledBills(config);
+            this.renderBreakEven(config);
+        } catch (error) {
+            console.error("Erro ao excluir conta programada:", error);
+            notificationService.error('Erro', 'Falha ao excluir conta.');
+        }
     }
 
     renderBreakEven(config) {
