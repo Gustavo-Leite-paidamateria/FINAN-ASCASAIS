@@ -213,7 +213,8 @@ class ReportsController {
             const fixedPct = income > 0 ? (fixed / income * 100) : 0;
             this.updateElement('report-fixed-pct', fixedPct.toFixed(1) + '%');
 
-            SpiritualMentor.render('reports-insight-container', SpiritualMentor.getReportInsight(summary));
+            const config = window.app.config;
+            SpiritualMentor.render('reports-insight-container', SpiritualMentor.getReportInsight(config, summary), config);
         } catch (e) {
             console.error('renderSummary error:', e);
         }
@@ -350,9 +351,10 @@ class ReportsController {
             }).join('');
 
             // Render Mentor Insight for Categories
-            const insightText = SpiritualMentor.getTopCategoryInsight(categoryData);
+            const config = window.app.config;
+            const insightText = SpiritualMentor.getTopCategoryInsight(config, categoryData);
             if (insightText) {
-                SpiritualMentor.render('category-insight-container', insightText);
+                SpiritualMentor.render('category-insight-container', insightText, config);
             }
         }
     }
@@ -458,9 +460,10 @@ class ReportsController {
             });
 
             // Render Mentor Insight for Evolution
-            const insightText = SpiritualMentor.getEvolutionInsight(sortedMonths, incomeData, expenseData);
+            const config = window.app.config;
+            const insightText = SpiritualMentor.getEvolutionInsight(config, sortedMonths, incomeData, expenseData);
             if (insightText) {
-                SpiritualMentor.render('evolution-insight-container', insightText);
+                SpiritualMentor.render('evolution-insight-container', insightText, config);
             }
         } catch (e) {
             console.error('Evolution chart error:', e);
