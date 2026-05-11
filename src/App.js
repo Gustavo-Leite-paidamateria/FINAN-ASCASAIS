@@ -1,4 +1,4 @@
-import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController } from './controllers/index.js';
+import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController, SetupController } from './controllers/index.js';
 import { storageService, notificationService, supabaseService } from './services/index.js';
 import { MENTOR_CONFIGS } from './utils/mentorsConfig.js';
 import { router } from './routes/router.js';
@@ -19,6 +19,7 @@ class App {
         this.familyController = new FamilyController();
         this.simulatorController = new SimulatorController();
         this.importController = new ImportController();
+        this.setupController = new SetupController();
         this.currentView = 'dashboard';
     }
 

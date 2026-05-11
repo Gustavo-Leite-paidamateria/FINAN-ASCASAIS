@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
     ALERTS_CHECKED: 'alerts_checked',
     THEME: 'finance_app_theme',
     TOUR_COMPLETED: 'tour_completed',
+    SETUP_COMPLETED: 'setup_completed',
     WORKSPACE_ID: 'finance_workspace_id'
 };
 
@@ -64,6 +65,14 @@ class StorageService {
 
     getTourCompleted() {
         return localStorage.getItem(STORAGE_KEYS.TOUR_COMPLETED) === 'true';
+    }
+
+    setSetupCompleted(value = true) {
+        localStorage.setItem(STORAGE_KEYS.SETUP_COMPLETED, value.toString());
+    }
+
+    getSetupCompleted() {
+        return localStorage.getItem(STORAGE_KEYS.SETUP_COMPLETED) === 'true';
     }
 
     saveWorkspaceId(id) {

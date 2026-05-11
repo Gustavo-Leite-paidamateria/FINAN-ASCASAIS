@@ -213,6 +213,8 @@ class AuthController {
             if (!storageService.getTourCompleted()) {
                 setTimeout(() => window.app?.startTour(), 1500);
             }
+
+            this.checkSetupNeeded(config);
         } catch (e) {
             console.error('Initialization error:', e);
             const errorMsg = e.message || 'Erro desconhecido';
@@ -243,6 +245,28 @@ class AuthController {
         }
 
         return config;
+    }
+
+    checkSetupNeeded(config) {
+        if (storageService.getSetupCompleted()) return;
+
+        const hasData = config.scheduledBills.length > 0 ||
+            config.debts.length > 0 ||
+            config.goals.length > 0 ||
+            config.cards.length > 1 ||
+            config.wallets.length > 1;
+
+        if (hasData) {
+            storageService.setSetupCompleted(true);
+            return;
+        }
+
+        const count = config.scheduledBills.length;
+        setTimeout(() => {
+            if (window.app?.setupController) {
+                window.app.setupController.start(config);
+            }
+        }, 800);
     }
 
     checkAlerts(config) {

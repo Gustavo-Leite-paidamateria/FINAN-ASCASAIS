@@ -10,3 +10,4 @@ export { default as CalendarController } from './CalendarController.js';
 export { default as FamilyController } from './FamilyController.js';
 export { default as SimulatorController } from './SimulatorController.js';
 export { default as ImportController } from './ImportController.js';
+export { default as SetupController } from './SetupController.js';
