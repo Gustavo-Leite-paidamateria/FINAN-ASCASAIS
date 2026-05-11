@@ -1,5 +1,6 @@
 import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController } from './controllers/index.js';
 import { storageService, notificationService, supabaseService } from './services/index.js';
+import { MENTOR_CONFIGS } from './utils/mentorsConfig.js';
 import { router } from './routes/router.js';
 import { UserConfig } from './models/index.js';
 
@@ -577,7 +578,6 @@ class App {
 
         const mentorSelect = document.getElementById('profile-mentor-select');
         if (mentorSelect) {
-            const { MENTOR_CONFIGS } = await import('./utils/mentorsConfig.js');
             mentorSelect.innerHTML = Object.keys(MENTOR_CONFIGS).map(id => `
                 <option value="${id}" ${this.config.selectedMentor === id ? 'selected' : ''}>
                     ${MENTOR_CONFIGS[id].icon} ${MENTOR_CONFIGS[id].name}
