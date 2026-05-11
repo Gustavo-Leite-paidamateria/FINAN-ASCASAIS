@@ -22,7 +22,25 @@ class AuthController {
 
     async register(email, password) {
         try {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                const msg = 'E-mail inválido. Use um formato válido (ex: nome@provedor.com).';
+                const errDiv = document.getElementById('login-error');
+                if (errDiv) errDiv.textContent = msg;
+                notificationService.error('Erro', msg);
+                return false;
+            }
+
+            if (password.length < 6) {
+                const msg = 'Senha deve ter no mínimo 6 caracteres.';
+                const errDiv = document.getElementById('login-error');
+                if (errDiv) errDiv.textContent = msg;
+                notificationService.error('Erro', msg);
+                return false;
+            }
+
             const authData = await supabaseService.registerUser(email, password);
+
             if(authData.user && authData.user.identities && authData.user.identities.length === 0) {
                  notificationService.error('Erro', 'Este e-mail já está em uso.');
                  return false;
@@ -34,11 +52,19 @@ class AuthController {
             return true;
         } catch (error) {
             console.error("Register failed:", error);
-            const errDiv = document.getElementById('login-error');
-            if (errDiv) {
-                errDiv.textContent = error.message || "Erro ao criar conta. Verifique os dados.";
+
+            let msg = error.message || "Erro ao criar conta.";
+            if (error.message?.includes('rate limit')) {
+                msg = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+            } else if (error.message?.includes('invalid')) {
+                msg = "E-mail inválido. Verifique o formato.";
+            } else if (error.message?.includes('already')) {
+                msg = "Este e-mail já está cadastrado.";
             }
-            notificationService.error('Erro', 'Erro ao criar conta.');
+
+            const errDiv = document.getElementById('login-error');
+            if (errDiv) errDiv.textContent = msg;
+            notificationService.error('Erro', msg);
             return false;
         }
     }
