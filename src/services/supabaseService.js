@@ -170,8 +170,8 @@ class SupabaseService {
             .upsert({ 
                 workspace_id: this.currentWorkspaceId, 
                 dados: data,
-                id: session.user.id // Keep id for legacy/primary key if needed
-            }, { onConflict: 'workspace_id' });
+                id: session.user.id
+            });
         
         if (error) console.warn("Supabase Sync Error:", error);
         return !error;
