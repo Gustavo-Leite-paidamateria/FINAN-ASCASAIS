@@ -17,8 +17,10 @@ export default class ImportController {
 
             if (file.name.toLowerCase().endsWith('.ofx') || file.name.toLowerCase().endsWith('.qfx')) {
                 extracted = ImportService.parseOFX(content);
+            } else if (file.name.toLowerCase().endsWith('.csv')) {
+                extracted = ImportService.parseCSV(content);
             } else {
-                notificationService.error('Erro', 'Formato de arquivo não suportado. Use .ofx ou .qfx');
+                notificationService.error('Erro', 'Formato não suportado. Use .ofx, .qfx ou .csv');
                 return;
             }
 
