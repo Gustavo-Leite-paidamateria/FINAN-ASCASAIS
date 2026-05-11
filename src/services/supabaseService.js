@@ -5,7 +5,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 class SupabaseService {
     constructor() {
-        this.client = null;
         this.currentWorkspaceId = null;
         this.realtimeChannel = null;
         this._initialized = false;
