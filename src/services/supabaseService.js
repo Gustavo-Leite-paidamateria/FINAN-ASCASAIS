@@ -179,12 +179,32 @@ class SupabaseService {
 
     async getWorkspaces() {
         this.init();
-        const { data, error } = await this.client
+        // Fetch memberships first (no join to avoid RLS recursion)
+        const { data: members, error: memError } = await this.client
             .from('workspace_members')
-            .select('workspace_id, role, workspaces(name, owner_id)');
-        if (error) throw error;
-        console.log("Workspaces encontrados para o usuário:", data);
-        return data;
+            .select('workspace_id, role')
+            .eq('user_id', (await this.client.auth.getSession()).data.session?.user?.id);
+        if (memError) throw memError;
+
+        if (!members || members.length === 0) return [];
+
+        // Fetch workspace names separately
+        const ids = members.map(m => m.workspace_id);
+        const { data: workspaces, error: wsError } = await this.client
+            .from('workspaces')
+            .select('id, name, owner_id')
+            .in('id', ids);
+        if (wsError) throw wsError;
+
+        // Merge results
+        const result = members.map(m => ({
+            workspace_id: m.workspace_id,
+            role: m.role,
+            workspaces: workspaces?.find(w => w.id === m.workspace_id) || { name: 'Meu Espaço', owner_id: null }
+        }));
+
+        console.log("Workspaces encontrados para o usuário:", result);
+        return result;
     }
 
     async fetchManagedProfiles() {
