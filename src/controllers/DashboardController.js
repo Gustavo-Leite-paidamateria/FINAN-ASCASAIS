@@ -315,7 +315,7 @@ class DashboardController {
 
     renderInsights(config, metrics, projections) {
         // Main Revelation Card
-        const mainText = SpiritualMentor.getMainRevelation(metrics, projections);
+        const mainText = SpiritualMentor.getMainRevelation(config, metrics, projections);
         const mainCard = document.getElementById('main-revelation');
         const mainTextEl = document.getElementById('prophetic-insight-text');
         
@@ -325,11 +325,11 @@ class DashboardController {
         }
 
         // Distributed Insights
-        this.renderContextInsight('balance-insight-container', SpiritualMentor.getBalanceInsight(projections.realProjection));
-        this.renderContextInsight('saving-insight-container', SpiritualMentor.getSavingInsight(
+        this.renderContextInsight('balance-insight-container', SpiritualMentor.getBalanceInsight(config, projections.realProjection));
+        this.renderContextInsight('saving-insight-container', SpiritualMentor.getSavingInsight(config, 
              metrics.income > 0 ? ((metrics.income - metrics.expense) / metrics.income) * 100 : 0
         ));
-        this.renderContextInsight('goals-insight-container', SpiritualMentor.getGoalsInsight(config.goals));
+        this.renderContextInsight('goals-insight-container', SpiritualMentor.getGoalsInsight(config, config.goals));
     }
 
     renderContextInsight(containerId, text) {

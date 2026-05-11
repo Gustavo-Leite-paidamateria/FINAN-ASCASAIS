@@ -11,6 +11,19 @@ export class SpiritualMentor {
         return MENTOR_CONFIGS[mentorId] || MENTOR_CONFIGS.PASTOR_TRADICIONAL;
     }
 
+    static getMainRevelation(config, metrics, projections) {
+        const mentor = this.getActiveMentor(config);
+        
+        // Se houver projeção negativa, priorizar aviso de perigo
+        if (projections?.realProjection < 0) {
+            return this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: 'Saldo Geral' });
+        }
+
+        // Caso contrário, pegar uma frase aleatória de orçamentos ou economia
+        const type = metrics?.income > metrics?.expense ? 'ECONOMIA_POUPANCA' : 'ORCAMENTO_setup';
+        return this.getPhrase(config, type);
+    }
+
     static getPhrase(config, type, data = {}) {
         const mentor = this.getActiveMentor(config);
         const categoryPhrases = mentor.insights[type] || [];
@@ -45,6 +58,11 @@ export class SpiritualMentor {
     static getSavingInsight(config, rate) {
         if (rate > 0) return this.getPhrase(config, 'ECONOMIA_POUPANCA');
         return "📉 Vamos começar a poupar?";
+    }
+
+    static getGoalsInsight(config, goals) {
+        if (!goals || goals.length === 0) return "🎯 Qual o seu próximo alvo?";
+        return this.getPhrase(config, 'ECONOMIA_POUPANCA'); // Reusando frases de economia para metas
     }
 
     static render(containerId, text, config = null) {
