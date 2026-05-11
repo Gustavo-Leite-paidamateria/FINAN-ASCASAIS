@@ -1,6 +1,7 @@
 import { Transaction, CATEGORIES, CATEGORY_ICONS, FIXED_CATEGORIES } from '../models/index.js';
 import { supabaseService, notificationService } from '../services/index.js';
 import { formatCurrency, getMonthDateRange, formatMonthYear, SpiritualMentor } from '../utils/index.js';
+import { FinancialAnalyzer } from '../utils/FinancialAnalyzer.js';
 
 class ReportsController {
     constructor() {
@@ -124,6 +125,7 @@ class ReportsController {
         await this.renderEvolutionChart();
         this.renderPayeeReport(summary.byPayee);
         this.renderTransactionsList(transactions);
+        this.renderFinancialAnalysis(transactions);
     }
 
     calculateSummary(transactions, profile = 'all') {
@@ -648,6 +650,179 @@ class ReportsController {
             console.error('Export Excel error', e);
             notificationService.error('Erro', 'Falha ao exportar Excel');
         }
+    }
+
+    renderFinancialAnalysis(transactions) {
+        const container = document.getElementById('financial-analysis-container');
+        if (!container) return;
+
+        const config = window.app.config;
+        const analysis = FinancialAnalyzer.analyze(transactions, config);
+
+        container.innerHTML = this.buildAnalysisHTML(analysis);
+    }
+
+    buildAnalysisHTML(analysis) {
+        const { subscriptions, patterns, profile, recommendations } = analysis;
+
+        let profileBadge = '';
+        if (profile) {
+            const colors = {
+                poupador: '#10b981',
+                equilibrado: '#3b82f6',
+                gastador_consciente: '#f59e0b',
+                gastador: '#f97316',
+                endividado: '#f43f5e'
+            };
+            const color = colors[profile.type] || '#94a3b8';
+            profileBadge = `
+                <div class="fin-profile-badge" style="border-color: ${color};">
+                    <div class="fin-profile-score" style="background: ${color};">
+                        <span class="fin-score-value">${profile.score}</span>
+                        <span class="fin-score-label">/100</span>
+                    </div>
+                    <div class="fin-profile-info">
+                        <strong style="color: ${color};">${profile.label}</strong>
+                        <span>Taxa de poupança: ${profile.savingsRate.toFixed(1)}%</span>
+                        <span>Custos fixos: ${(profile.fixedRatio * 100).toFixed(0)}% da receita</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let subscriptionsHtml = '';
+        if (subscriptions.length > 0) {
+            subscriptionsHtml = subscriptions.slice(0, 6).map(sub => {
+                const pct = sub.distinctMonths >= 6 ? '🟢' : sub.distinctMonths >= 3 ? '🟡' : '🔵';
+                return `
+                    <div class="fin-sub-item">
+                        <div class="fin-sub-info">
+                            <strong>${sub.description}</strong>
+                            <span>${sub.category} · ${sub.occurrences}x em ${sub.distinctMonths} meses</span>
+                        </div>
+                        <div class="fin-sub-value">${formatCurrency(sub.amount)}<span class="fin-sub-year">/mês</span></div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            subscriptionsHtml = '<div class="empty-state">Nenhuma assinatura recorrente detectada.</div>';
+        }
+
+        let patternsHtml = '';
+        if (patterns) {
+            const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const barMax = Math.max(...patterns.byDayOfWeek, 1);
+            const dayBars = patterns.byDayOfWeek.map((count, i) => `
+                <div class="fin-day-bar-container" title="${dayNames[i]}: ${count} compra(s)">
+                    <span class="fin-day-label">${dayNames[i]}</span>
+                    <div class="fin-day-bar-track">
+                        <div class="fin-day-bar-fill" style="height: ${(count / barMax) * 100}%; background: ${i === 0 || i === 6 ? 'var(--expense)' : 'var(--accent)'};"></div>
+                    </div>
+                    <span class="fin-day-count">${count}</span>
+                </div>
+            `).join('');
+
+            patternsHtml = `
+                <div class="fin-patterns-grid">
+                    <div class="fin-pattern-card">
+                        <i class="fa-solid fa-calculator"></i>
+                        <div>
+                            <span class="fin-label">Ticket Médio</span>
+                            <strong>${formatCurrency(patterns.avgTicket)}</strong>
+                        </div>
+                    </div>
+                    <div class="fin-pattern-card">
+                        <i class="fa-solid fa-ranking-star"></i>
+                        <div>
+                            <span class="fin-label">Categoria Top</span>
+                            <strong>${patterns.topCategory?.name || '-'}</strong>
+                            <span class="fin-sub">${patterns.topCategory?.pct.toFixed(1) || 0}% dos gastos</span>
+                        </div>
+                    </div>
+                    <div class="fin-pattern-card">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <div>
+                            <span class="fin-label">Dia de Pico</span>
+                            <strong>${patterns.peakDayName}</strong>
+                            <span class="fin-sub">${patterns.byDayOfWeek[patterns.peakDayIndex]} compras</span>
+                        </div>
+                    </div>
+                    <div class="fin-pattern-card">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <div>
+                            <span class="fin-label">Maior Gasto</span>
+                            <strong>${formatCurrency(patterns.largest?.value || 0)}</strong>
+                            <span class="fin-sub">${patterns.largest?.description || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="fin-day-chart">
+                    <h5>Distribuição por Dia da Semana</h5>
+                    <div class="fin-day-bars">${dayBars}</div>
+                </div>
+            `;
+        }
+
+        let recommendationsHtml = '';
+        if (recommendations.length > 0) {
+            const severityColors = {
+                critical: { bg: 'rgba(244, 63, 94, 0.15)', border: '#f43f5e', icon: '🔴' },
+                high: { bg: 'rgba(245, 158, 11, 0.15)', border: '#f59e0b', icon: '🟡' },
+                medium: { bg: 'rgba(59, 130, 246, 0.15)', border: '#3b82f6', icon: '🔵' },
+                low: { bg: 'rgba(148, 163, 184, 0.15)', border: '#94a3b8', icon: '⚪' }
+            };
+            recommendationsHtml = recommendations.map(rec => {
+                const s = severityColors[rec.severity] || severityColors.low;
+                return `
+                    <div class="fin-rec-item" style="background: ${s.bg}; border-left: 3px solid ${s.border};">
+                        <div class="fin-rec-icon">${rec.icon}</div>
+                        <div class="fin-rec-body">
+                            <div class="fin-rec-header">
+                                <strong>${rec.title}</strong>
+                                <span class="fin-rec-severity" style="color: ${s.border};">${rec.severity === 'critical' ? 'Crítico' : rec.severity === 'high' ? 'Alta' : rec.severity === 'medium' ? 'Média' : 'Baixa'}</span>
+                            </div>
+                            <p>${rec.description}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        return `
+            ${profile ? `
+            <div class="glass-card highlight-card fin-section">
+                <div class="section-header">
+                    <h3>📊 Perfil do Consumidor</h3>
+                </div>
+                ${profileBadge}
+            </div>
+            ` : ''}
+
+            ${patterns ? `
+            <div class="glass-card fin-section">
+                <div class="section-header">
+                    <h3>🔄 Padrões de Compra</h3>
+                </div>
+                ${patternsHtml}
+            </div>
+            ` : ''}
+
+            <div class="glass-card fin-section">
+                <div class="section-header">
+                    <h3>📡 Assinaturas Detectadas</h3>
+                    <span class="fin-badge">${subscriptions.length} encontrada(s)</span>
+                </div>
+                <p class="subtitle" style="text-align:left; margin-bottom:16px;">Gastos recorrentes com mesmo valor e descrição entre meses.</p>
+                <div class="fin-sub-list">${subscriptionsHtml}</div>
+            </div>
+
+            <div class="glass-card fin-section">
+                <div class="section-header">
+                    <h3>💡 Recomendações para Saúde Financeira</h3>
+                </div>
+                <div class="fin-rec-list">${recommendationsHtml}</div>
+            </div>
+        `;
     }
 
     updateElement(id, value) {
