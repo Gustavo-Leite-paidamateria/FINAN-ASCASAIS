@@ -12,7 +12,7 @@ export class SpiritualMentor {
     }
 
     static getMainRevelation(config, metrics, projections) {
-        const mentor = this.getActiveMentor(config);
+        if (!config) return "Vigia, varão! Carregando dados...";
         
         // Se houver projeção negativa, priorizar aviso de perigo
         if (projections?.realProjection < 0) {
@@ -41,17 +41,20 @@ export class SpiritualMentor {
     }
 
     static getBalanceInsight(config, balance) {
-        if (balance < 0) return `⚠️ ${this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: 'Saldo Geral' })}`;
-        if (balance < 500) return `🌱 O pé de meia tá pequeno, mas vai crescer!`;
-        return `✨ Tudo sob controle no Reino!`;
+        if (balance < 0) return this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: 'Saldo Geral' });
+        return this.getPhrase(config, 'ECONOMIA_POUPANCA');
     }
 
     static getBudgetSetupInsight(config, budgets) {
         return this.getPhrase(config, 'ORCAMENTO_setup');
     }
 
+    static getPlanningInsight(config) {
+        return this.getPhrase(config, 'ORCAMENTO_setup');
+    }
+
     static getDebtInsight(config, debts = []) {
-        if (debts.length === 0) return "🕊️ Livre como um pássaro! Nenhuma dívida ativa.";
+        if (debts.length === 0) return "🕊️ Nenhuma dívida ativa. Você é livre!";
         return this.getPhrase(config, 'DIVIDAS');
     }
 
@@ -61,8 +64,31 @@ export class SpiritualMentor {
     }
 
     static getGoalsInsight(config, goals) {
-        if (!goals || goals.length === 0) return "🎯 Qual o seu próximo alvo?";
-        return this.getPhrase(config, 'ECONOMIA_POUPANCA'); // Reusando frases de economia para metas
+        return this.getPhrase(config, 'ECONOMIA_POUPANCA');
+    }
+
+    static getReportInsight(config, summary) {
+        if (summary?.balance < 0) return this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: 'Balanço Geral' });
+        return this.getPhrase(config, 'ECONOMIA_POUPANCA');
+    }
+
+    static getTopCategoryInsight(config, categoryTotals) {
+        const sorted = Object.entries(categoryTotals || {})
+            .filter(([cat]) => cat !== 'Receita')
+            .sort((a, b) => b[1] - a[1]);
+        
+        if (sorted.length === 0) return "";
+        const [topCat] = sorted[0];
+        return this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: topCat });
+    }
+
+    static getEvolutionInsight(config, labels, income, expense) {
+        return this.getPhrase(config, 'ORCAMENTO_setup');
+    }
+
+    static getCardUsageInsight(config, used, limit) {
+        if (used > limit * 0.8) return this.getPhrase(config, 'GASTO_EXCESSIVO', { categoria: 'Cartão' });
+        return "💳 Uso controlado do cartão.";
     }
 
     static render(containerId, text, config = null) {
@@ -71,9 +97,7 @@ export class SpiritualMentor {
 
         const mentor = this.getActiveMentor(config);
         
-        // Definir cor baseada no tom (simplificado)
-        const type = text.includes('Misericórdia') || text.includes('Vigia') || text.includes('Atenção') ? 'warning' : 
-                     text.includes('Erro') || text.includes('perigo') ? 'danger' : '';
+        const type = text.includes('⚠️') || text.includes('Vigia') || text.includes('Atenção') ? 'warning' : '';
 
         container.innerHTML = `
             <div class="context-insight ${type}">
