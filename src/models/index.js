@@ -455,6 +455,7 @@ export class UserConfig {
         this.workspace_id = null;
         this.simulations = [];
         this.profileBudgets = {}; // { profileId: { Category: Amount } }
+        this.selectedMentor = 'PASTOR_TRADICIONAL';
     }
 
     static fromJSON(json) {
@@ -481,6 +482,8 @@ export class UserConfig {
             });
         }
 
+        config.selectedMentor = json.selectedMentor || 'PASTOR_TRADICIONAL';
+
         return config;
     }
 
@@ -498,7 +501,8 @@ export class UserConfig {
             userData: this.userData,
             workspace_id: this.workspace_id,
             simulations: this.simulations,
-            profileBudgets: this.profileBudgets
+            profileBudgets: this.profileBudgets,
+            selectedMentor: this.selectedMentor
         };
     }
 }

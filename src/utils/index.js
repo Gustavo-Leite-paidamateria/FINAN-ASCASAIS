@@ -56,3 +56,4 @@ export const debounce = (func, wait) => {
 export const cloneObject = (obj) => JSON.parse(JSON.stringify(obj));
 
 export { SpiritualMentor } from './SpiritualMentor.js';
+export { MENTOR_CONFIGS } from './mentorsConfig.js';

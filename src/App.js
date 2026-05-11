@@ -528,12 +528,14 @@ class App {
                 const displayName = document.getElementById('profile-display-name')?.value?.trim();
                 const newPw = document.getElementById('profile-new-password')?.value;
                 const confirmPw = document.getElementById('profile-confirm-password')?.value;
+                const selectedMentor = document.getElementById('profile-mentor-select')?.value;
                 await this.authController.saveProfile(
                     this.config,
                     displayName,
                     this._pendingAvatarBase64 ?? null,
                     newPw,
-                    confirmPw
+                    confirmPw,
+                    selectedMentor
                 );
                 this._pendingAvatarBase64 = undefined;
             });
@@ -572,6 +574,16 @@ class App {
         if (pwInput) pwInput.value = '';
         if (confirmInput) confirmInput.value = '';
         if (fileInput) fileInput.value = '';
+
+        const mentorSelect = document.getElementById('profile-mentor-select');
+        if (mentorSelect) {
+            const { MENTOR_CONFIGS } = await import('./utils/mentorsConfig.js');
+            mentorSelect.innerHTML = Object.keys(MENTOR_CONFIGS).map(id => `
+                <option value="${id}" ${this.config.selectedMentor === id ? 'selected' : ''}>
+                    ${MENTOR_CONFIGS[id].icon} ${MENTOR_CONFIGS[id].name}
+                </option>
+            `).join('');
+        }
 
         if (img && icon) {
             if (userData.avatar_url) {

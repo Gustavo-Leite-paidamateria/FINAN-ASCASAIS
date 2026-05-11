@@ -101,8 +101,13 @@ class AuthController {
         window.app?.familyController?.renderProfileSwitcher(config);
     }
 
-    async saveProfile(config, displayName, avatarBase64, newPassword, confirmPassword) {
+    async saveProfile(config, displayName, avatarBase64, newPassword, confirmPassword, selectedMentor) {
         let changed = false;
+
+        if (selectedMentor && selectedMentor !== config.selectedMentor) {
+            config.selectedMentor = selectedMentor;
+            changed = true;
+        }
 
         if (newPassword) {
             if (newPassword.length < 6) {
