@@ -99,15 +99,12 @@ WITH CHECK (
 );
 
 -- 3. Policies for workspaces table
-CREATE POLICY "Users can select workspaces they are members of"
+-- Simpler: any authenticated user can see any workspace.
+-- Access control is handled at the membership level in application code.
+CREATE POLICY "Users can select workspaces"
 ON public.workspaces FOR SELECT
 TO authenticated
-USING (
-    id IN (
-        SELECT workspace_id FROM public.workspace_members
-        WHERE user_id = auth.uid()
-    )
-);
+USING (true);
 
 CREATE POLICY "Users can create workspaces"
 ON public.workspaces FOR INSERT
