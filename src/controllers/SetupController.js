@@ -321,17 +321,29 @@ class SetupController {
                 <p class="setup-subtitle">Streaming, academia, seguro, etc.</p>
                 <div id="setup-sub-list" class="setup-dynamic-list">${items}</div>
                 <div class="setup-add-row">
-                    <input type="text" id="setup-sub-name" placeholder="Nome (ex: Netflix)" style="flex:1;">
-                    <input type="number" id="setup-sub-amount" step="0.01" placeholder="Valor" style="width:100px;">
-                    <input type="number" id="setup-sub-due" min="1" max="31" placeholder="Dia" style="width:60px;" value="15">
+                    <div class="setup-field">
+                        <label for="setup-sub-name">Nome</label>
+                        <input type="text" id="setup-sub-name" placeholder="Ex: Netflix" style="flex:1;">
+                    </div>
+                    <div class="setup-field">
+                        <label for="setup-sub-amount">Valor (R$)</label>
+                        <input type="number" id="setup-sub-amount" step="0.01" placeholder="0,00" style="width:100px;">
+                    </div>
+                    <div class="setup-field">
+                        <label for="setup-sub-due">Dia</label>
+                        <input type="number" id="setup-sub-due" min="1" max="31" placeholder="15" style="width:60px;" value="15">
+                    </div>
                     ${showOwner ? `
-                    <select id="setup-sub-owner" style="width:80px;padding:8px;">
-                        <option value="ambos">👫</option>
-                        <option value="eu">👤</option>
-                        <option value="esposa">👩</option>
-                    </select>
+                    <div class="setup-field">
+                        <label for="setup-sub-owner">Dono</label>
+                        <select id="setup-sub-owner" style="width:80px;padding:8px;">
+                            <option value="ambos">👫</option>
+                            <option value="eu">👤</option>
+                            <option value="esposa">👩</option>
+                        </select>
+                    </div>
                     ` : ''}
-                    <button class="btn-icon" onclick="window.app.setupController.addSubscription()"><i class="fa-solid fa-plus"></i></button>
+                    <button class="btn-icon" onclick="window.app.setupController.addSubscription()" title="Adicionar assinatura"><i class="fa-solid fa-plus"></i></button>
                 </div>
             </div>
         `;
@@ -370,21 +382,42 @@ class SetupController {
                 <div id="setup-debt-list" class="setup-dynamic-list">${items}</div>
                 <div class="setup-add-card">
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <input type="text" id="setup-debt-name" placeholder="Nome (ex: Curso, Geladeira)" style="flex:1;min-width:120px;">
-                        <input type="number" id="setup-debt-total" step="0.01" placeholder="Total R$" style="width:100px;">
-                        <input type="number" id="setup-debt-paid" step="0.01" placeholder="Pago R$" style="width:90px;">
+                        <div class="setup-field" style="flex:1;min-width:120px;">
+                            <label for="setup-debt-name">Nome</label>
+                            <input type="text" id="setup-debt-name" placeholder="Ex: Curso, Geladeira">
+                        </div>
+                        <div class="setup-field" style="width:100px;">
+                            <label for="setup-debt-total">Total (R$)</label>
+                            <input type="number" id="setup-debt-total" step="0.01" placeholder="0,00">
+                        </div>
+                        <div class="setup-field" style="width:90px;">
+                            <label for="setup-debt-paid">Pago (R$)</label>
+                            <input type="number" id="setup-debt-paid" step="0.01" placeholder="0,00">
+                        </div>
                     </div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                        <input type="number" id="setup-debt-installments" min="1" placeholder="Parcelas" style="width:90px;" value="12">
-                        <input type="number" id="setup-debt-due" min="1" max="31" placeholder="Dia venc." style="width:90px;" value="5">
-                        <select id="setup-debt-type" style="width:110px;padding:8px;">
-                            <option value="Empréstimo">Empréstimo</option>
-                            <option value="Financiamento">Financiamento</option>
-                            <option value="Cartão">Cartão</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                        <input type="text" id="setup-debt-creditor" placeholder="Credor" style="flex:1;min-width:100px;">
-                        <button class="btn-icon" onclick="window.app.setupController.addDebt()"><i class="fa-solid fa-plus"></i></button>
+                        <div class="setup-field" style="width:90px;">
+                            <label for="setup-debt-installments">Parcelas</label>
+                            <input type="number" id="setup-debt-installments" min="1" placeholder="12" value="12">
+                        </div>
+                        <div class="setup-field" style="width:90px;">
+                            <label for="setup-debt-due">Dia venc.</label>
+                            <input type="number" id="setup-debt-due" min="1" max="31" placeholder="5" value="5">
+                        </div>
+                        <div class="setup-field" style="width:110px;">
+                            <label for="setup-debt-type">Tipo</label>
+                            <select id="setup-debt-type" style="padding:8px;">
+                                <option value="Empréstimo">Empréstimo</option>
+                                <option value="Financiamento">Financiamento</option>
+                                <option value="Cartão">Cartão</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="setup-field" style="flex:1;min-width:100px;">
+                            <label for="setup-debt-creditor">Credor</label>
+                            <input type="text" id="setup-debt-creditor" placeholder="Quem deve receber">
+                        </div>
+                        <button class="btn-icon" onclick="window.app.setupController.addDebt()" title="Adicionar dívida" style="margin-top:20px;"><i class="fa-solid fa-plus"></i></button>
                     </div>
                 </div>
             </div>

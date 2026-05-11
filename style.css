@@ -2003,6 +2003,18 @@ input:checked + label.type-btn.income { background: var(--income); color: white;
     flex-wrap: wrap;
 }
 
+.setup-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.setup-field label {
+    font-size: 0.7rem;
+    color: var(--text-sec);
+    font-weight: 500;
+}
+
 .setup-add-row input,
 .setup-add-row select {
     padding: 8px 12px;
