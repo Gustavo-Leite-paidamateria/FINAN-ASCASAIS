@@ -1,4 +1,4 @@
-import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController, SetupController } from './controllers/index.js';
+import { DashboardController, PlanningController, DebtController, ReportsController, TransactionController, GoalController, AuthController, PayeeController, CalendarController, FamilyController, SimulatorController, ImportController, SetupController, InvestmentsController } from './controllers/index.js';
 import { storageService, notificationService, supabaseService } from './services/index.js';
 import { MENTOR_CONFIGS } from './utils/mentorsConfig.js';
 import { router } from './routes/router.js';
@@ -20,6 +20,7 @@ class App {
         this.simulatorController = new SimulatorController();
         this.importController = new ImportController();
         this.setupController = new SetupController();
+        this.investmentsController = new InvestmentsController();
         this.currentView = 'dashboard';
     }
 
@@ -441,6 +442,26 @@ class App {
                 this.familyController.addProfile(this.config);
             });
         }
+
+        // Investment events
+        const addInvBtn = document.getElementById('add-inv-btn');
+        if (addInvBtn) {
+            addInvBtn.addEventListener('click', () => this.investmentsController.openAddModal());
+        }
+
+        const closeInvModal = document.getElementById('close-inv-modal');
+        if (closeInvModal) {
+            closeInvModal.addEventListener('click', () =>
+                document.getElementById('inv-modal')?.classList.add('hidden'));
+        }
+
+        const invForm = document.getElementById('inv-form');
+        if (invForm) {
+            invForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.investmentsController.add(this.config);
+            });
+        }
     }
 
     setupNavigation() {
@@ -486,6 +507,9 @@ class App {
         }
         if (tabId === 'simulator-view') {
             this.simulatorController.render(this.config);
+        }
+        if (tabId === 'investments-view') {
+            this.investmentsController.render(this.config);
         }
 
         router.navigate(tabId);

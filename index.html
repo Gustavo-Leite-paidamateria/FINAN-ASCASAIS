@@ -108,6 +108,9 @@
                 <button class="nav-item" data-tab="simulator-view" title="Simulador">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </button>
+                <button class="nav-item" data-tab="investments-view" title="Investimentos">
+                    <i class="fa-solid fa-chart-line"></i>
+                </button>
             </div>
         </nav>
 
@@ -679,6 +682,84 @@
                             </div>
                         </div>
                         <button onclick="window.app.simulatorController.addSimulation(window.app.config)" class="btn-primary w-full mt-2">Simular Evento</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investments View (Tab 7) -->
+            <div id="investments-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header" style="margin-bottom: 20px;">
+                    <h2>📈 Investimentos</h2>
+                    <button id="add-inv-btn" class="btn-icon" title="Adicionar Investimento">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Summary -->
+                <div class="glass-card highlight-card" style="margin-bottom: 24px; padding: 16px;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="icon-circle" style="background: rgba(59,130,246,0.15);color:#3b82f6;">
+                                <i class="fa-solid fa-coins"></i>
+                            </div>
+                            <div>
+                                <p>Total Investido</p>
+                                <h4 id="inv-total-invested">R$ 0,00</h4>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="icon-circle" style="background: rgba(16,185,129,0.15);color:#10b981;">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <p>Valor Atual</p>
+                                <h4 id="inv-total-current">R$ 0,00</h4>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="icon-circle" style="background: rgba(245,158,11,0.15);color:#f59e0b;">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                            </div>
+                            <div>
+                                <p>Rentabilidade</p>
+                                <h4 id="inv-total-pl">R$ 0,00</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B3 Section -->
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3><i class="fa-solid fa-chart-simple" style="color:#3b82f6;"></i> B3 — Ações e FIIs</h3>
+                        <span class="subtitle" id="inv-b3-update"></span>
+                    </div>
+                    <div id="inv-b3-list" class="config-list">
+                        <div class="empty-state" style="padding:20px;">Nenhum ativo da B3 cadastrado.</div>
+                    </div>
+                </div>
+
+                <!-- Crypto Section -->
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3><i class="fa-brands fa-bitcoin" style="color:#f7931a;"></i> Criptomoedas</h3>
+                        <span class="subtitle" id="inv-crypto-update"></span>
+                    </div>
+                    <div id="inv-crypto-list" class="config-list">
+                        <div class="empty-state" style="padding:20px;">Nenhuma criptomoeda cadastrada.</div>
+                    </div>
+                </div>
+
+                <!-- Custom Investments Section -->
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3><i class="fa-solid fa-sack-dollar" style="color:#10b981;"></i> Investimentos Personalizados</h3>
+                    </div>
+                    <p class="subtitle" style="text-align:left;font-size:0.8rem;margin-bottom:12px;">
+                        CDB, caixinhas, empréstimos a parentes, ou qualquer investimento com rentabilidade fixa mensal.
+                    </p>
+                    <div id="inv-custom-list" class="config-list">
+                        <div class="empty-state" style="padding:20px;">Nenhum investimento personalizado cadastrado.</div>
                     </div>
                 </div>
             </div>
@@ -1457,6 +1538,104 @@
                 <button id="setup-next-btn" class="btn-primary" onclick="window.app.setupController.nextStep()">Próximo <i class="fa-solid fa-arrow-right"></i></button>
                 <button id="setup-finish-btn" class="btn-primary hidden" onclick="window.app.setupController.finish()"><i class="fa-solid fa-check"></i> Finalizar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Investment Modal -->
+    <div id="inv-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>📈 Novo Investimento</h3>
+                <button id="close-inv-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="inv-form">
+                <div class="input-group">
+                    <label>Tipo de Investimento</label>
+                    <select id="inv-type-select" style="background:rgba(15,23,42,0.6);color:white;padding:12px;border-radius:8px;border:1px solid var(--glass-border);width:100%;" onchange="window.app.investmentsController.setTypeFields(this.value)">
+                        <option value="b3">🇧🇷 B3 — Ações / FIIs / ETFs</option>
+                        <option value="crypto">₿ Criptomoedas</option>
+                        <option value="custom">📦 Personalizado (Caixinha, CDB, Empréstimo...)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Nome do Investimento</label>
+                    <input type="text" id="inv-name" required placeholder="Ex: PETR4, Bitcoin, Caixinha Nubank">
+                </div>
+
+                <div id="inv-category-group" class="input-group">
+                    <label>Categoria</label>
+                    <select id="inv-category" style="background:rgba(15,23,42,0.6);color:white;padding:12px;border-radius:8px;border:1px solid var(--glass-border);width:100%;">
+                        <option value="Ação">Ação</option>
+                        <option value="FII">FII</option>
+                        <option value="ETF">ETF</option>
+                        <option value="Criptomoeda">Criptomoeda</option>
+                        <option value="CDB">CDB</option>
+                        <option value="Tesouro Direto">Tesouro Direto</option>
+                        <option value="Caixinha">Caixinha</option>
+                        <option value="Empréstimo">Empréstimo</option>
+                        <option value="Previdência">Previdência</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+
+                <!-- B3 Fields -->
+                <div id="inv-b3-fields">
+                    <div class="input-group">
+                        <label>Ticker (ex: PETR4, VALE3, ITUB4)</label>
+                        <input type="text" id="inv-b3-ticker" placeholder="Ex: PETR4">
+                    </div>
+                </div>
+
+                <!-- Crypto Fields -->
+                <div id="inv-crypto-fields" class="hidden">
+                    <div class="input-group">
+                        <label>ID da Moeda (CoinGecko — ex: bitcoin, ethereum)</label>
+                        <input type="text" id="inv-crypto-id" placeholder="Ex: bitcoin">
+                        <small style="color:var(--text-sec);font-size:0.7rem;">Consulte <a href="https://www.coingecko.com" target="_blank" style="color:var(--accent);">CoinGecko</a> para IDs</small>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;">
+                    <div class="input-group" style="flex:1;">
+                        <label>Preço de Compra (R$)</label>
+                        <input type="number" id="inv-buy-price" step="0.01" placeholder="0,00">
+                    </div>
+                    <div class="input-group" style="flex:1;">
+                        <label>Valor Total Investido (R$)</label>
+                        <input type="number" id="inv-total-invested" step="0.01" placeholder="0,00">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Data da Compra</label>
+                    <input type="date" id="inv-date">
+                </div>
+
+                <!-- Custom Fields -->
+                <div id="inv-custom-fields" class="hidden">
+                    <div class="input-group">
+                        <label>Valor Investido (R$)</label>
+                        <input type="number" id="inv-custom-amount" step="0.01" placeholder="0,00">
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <div class="input-group" style="flex:1;">
+                            <label>Rentabilidade (% ao mês)</label>
+                            <input type="number" id="inv-monthly-return" step="0.01" placeholder="Ex: 1.5">
+                        </div>
+                        <div class="input-group" style="flex:1;">
+                            <label>Duração (meses)</label>
+                            <input type="number" id="inv-duration" min="1" placeholder="Ex: 12">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Data de Início</label>
+                        <input type="date" id="inv-start-date">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary w-full mt-4">Adicionar Investimento</button>
+            </form>
         </div>
     </div>
 

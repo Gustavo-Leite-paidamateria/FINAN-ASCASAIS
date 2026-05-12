@@ -154,6 +154,50 @@ export class Payee {
     }
 }
 
+export class Investment {
+    constructor(data = {}) {
+        this.id = data.id || 'inv_' + Date.now() + Math.random().toString(36).substr(2, 5);
+        this.name = data.name || '';
+        this.ticker = data.ticker || '';
+        this.type = data.type || 'custom';          // 'b3', 'crypto', 'custom'
+        this.category = data.category || 'Outro';   // 'Ação', 'FII', 'Criptomoeda', 'CDB', 'Caixinha', 'Empréstimo', etc.
+        this.buyPrice = parseFloat(data.buyPrice) || 0;
+        this.totalInvested = parseFloat(data.totalInvested) || 0;
+        this.quantity = parseFloat(data.quantity) || 0;
+        this.currentPrice = parseFloat(data.currentPrice) || 0;
+        this.lastPriceUpdate = data.lastPriceUpdate || null;
+        this.purchaseDate = data.purchaseDate || new Date().toISOString().split('T')[0];
+        
+        // Custom investment fields
+        this.monthlyReturn = parseFloat(data.monthlyReturn) || 0;   // % per month
+        this.startDate = data.startDate || null;
+        this.durationMonths = parseInt(data.durationMonths) || 0;
+    }
+
+    getCurrentValue() {
+        if (this.type === 'custom' && this.monthlyReturn > 0 && this.startDate) {
+            const start = new Date(this.startDate);
+            const now = new Date();
+            const monthsElapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+            const effectiveMonths = Math.min(monthsElapsed, this.durationMonths || Infinity);
+            if (effectiveMonths <= 0) return this.totalInvested;
+            return this.totalInvested * Math.pow(1 + this.monthlyReturn / 100, effectiveMonths);
+        }
+        if (this.currentPrice > 0 && this.quantity > 0) {
+            return this.currentPrice * this.quantity;
+        }
+        return this.totalInvested;
+    }
+
+    getProfitLoss() {
+        return this.getCurrentValue() - this.totalInvested;
+    }
+
+    getProfitLossPercent() {
+        return this.totalInvested > 0 ? (this.getProfitLoss() / this.totalInvested) * 100 : 0;
+    }
+}
+
 export class Budget {
     constructor(data = {}) {
         this.category = data.category || 'Outros';
@@ -479,7 +523,8 @@ export class UserConfig {
         this.userData = {};
         this.workspace_id = null;
         this.simulations = [];
-        this.profileBudgets = {}; // { profileId: { Category: Amount } }
+        this.investments = [];
+        this.profileBudgets = {};
         this.selectedMentor = 'PASTOR_TRADICIONAL';
     }
 
@@ -499,6 +544,7 @@ export class UserConfig {
         config.userData = json.userData || {};
         config.workspace_id = json.workspace_id || null;
         config.simulations = (json.simulations || []).map(s => new SimulationEvent(s));
+        config.investments = (json.investments || []).map(i => new Investment(i));
         
         config.profileBudgets = {};
         if (json.profileBudgets) {
@@ -526,6 +572,7 @@ export class UserConfig {
             userData: this.userData,
             workspace_id: this.workspace_id,
             simulations: this.simulations,
+            investments: this.investments,
             profileBudgets: this.profileBudgets,
             selectedMentor: this.selectedMentor
         };
