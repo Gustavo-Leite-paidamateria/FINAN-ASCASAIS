@@ -12,6 +12,12 @@ class InvestmentsController {
         this.renderCryptoList(config);
         this.renderCustomList(config);
 
+        // Registrar listeners para cálculos automáticos uma única vez
+        if (!this._listenersSet) {
+            this.setupAutoCalcListeners();
+            this._listenersSet = true;
+        }
+
         // Somente inicia o refresh se não houver um em andamento
         if (!this._isRefreshing) {
             this.refreshPrices(config);
@@ -408,12 +414,13 @@ class InvestmentsController {
     async addContribution(config) {
         const id = document.getElementById('contribution-inv-id').value;
         const buyPriceRaw = document.getElementById('contribution-buy-price').value;
-        const totalAmountRaw = document.getElementById('contribution-total-amount').value;
+        const quantityRaw = document.getElementById('contribution-quantity').value;
 
         const newBuyPrice = this.parseMoney(buyPriceRaw);
-        const newTotalAmount = this.parseMoney(totalAmountRaw);
+        const newQuantity = this.parseMoney(quantityRaw);
+        const newTotalAmount = newBuyPrice * newQuantity;
 
-        if (!newBuyPrice || !newTotalAmount) {
+        if (!newBuyPrice || !newQuantity) {
             notificationService.error('Erro', 'Por favor, informe valores válidos.');
             return;
         }
@@ -422,9 +429,6 @@ class InvestmentsController {
         if (invIndex === -1) return;
 
         const inv = config.investments[invIndex];
-        
-        // Novos valores
-        const newQuantity = newTotalAmount / newBuyPrice;
         
         // Recalcular Preço Médio
         const currentTotalInvested = inv.totalInvested || 0;
@@ -450,6 +454,36 @@ class InvestmentsController {
         } catch (e) {
             notificationService.error('Erro', 'Falha ao salvar aporte.');
         }
+    }
+
+    setupAutoCalcListeners() {
+        // Para Novo Investimento
+        const invQty = document.getElementById('inv-quantity');
+        const invPrice = document.getElementById('inv-buy-price');
+        const invTotal = document.getElementById('inv-total-invested');
+
+        const calcNew = () => {
+            const q = this.parseMoney(invQty.value) || 0;
+            const p = this.parseMoney(invPrice.value) || 0;
+            if (invTotal) invTotal.value = formatCurrency(q * p);
+        };
+
+        if (invQty) invQty.addEventListener('input', calcNew);
+        if (invPrice) invPrice.addEventListener('input', calcNew);
+
+        // Para Aporte
+        const contQty = document.getElementById('contribution-quantity');
+        const contPrice = document.getElementById('contribution-buy-price');
+        const contTotal = document.getElementById('contribution-total-amount');
+
+        const calcCont = () => {
+            const q = this.parseMoney(contQty.value) || 0;
+            const p = this.parseMoney(contPrice.value) || 0;
+            if (contTotal) contTotal.value = formatCurrency(q * p);
+        };
+
+        if (contQty) contQty.addEventListener('input', calcCont);
+        if (contPrice) contPrice.addEventListener('input', calcCont);
     }
 }
 

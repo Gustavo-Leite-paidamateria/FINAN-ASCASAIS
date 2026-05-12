@@ -1625,15 +1625,21 @@
                     </div>
                 </div>
 
-                <div style="display:flex;gap:10px;">
+                <div style="display:flex; gap:10px;">
                     <div class="input-group" style="flex:1;">
-                        <label>Preço de Compra (R$)</label>
+                        <label>Quantidade</label>
+                        <input type="text" id="inv-quantity" placeholder="Ex: 10">
+                    </div>
+                    <div class="input-group" style="flex:1;">
+                        <label>Preço Unitário (R$)</label>
                         <input type="text" id="inv-buy-price" placeholder="0,00">
                     </div>
-                    <div class="input-group" style="flex:1;">
-                        <label>Valor Total Investido (R$)</label>
-                        <input type="text" id="inv-total-invested" placeholder="0,00">
-                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Valor Total Investido (R$)</label>
+                    <input type="text" id="inv-total-invested" placeholder="0,00" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed; opacity: 0.8;">
+                    <small style="font-size: 0.7rem; color: var(--accent);">Calculado automaticamente: Qtd × Preço</small>
                 </div>
 
                 <div class="input-group">
@@ -1678,16 +1684,21 @@
                 <input type="hidden" id="contribution-inv-id">
                 <p id="contribution-inv-info" style="font-size: 0.9rem; color: var(--text-sec); margin-bottom: 20px;"></p>
                 
-                <div class="input-group">
-                    <label>Preço da Compra (R$)</label>
-                    <input type="text" id="contribution-buy-price" placeholder="R$ 0,00" required>
-                    <small style="font-size: 0.7rem; color: var(--text-sec);">Preço pago por cada cota/unidade neste aporte.</small>
+                <div style="display:flex; gap:10px;">
+                    <div class="input-group" style="flex:1;">
+                        <label>Quantidade</label>
+                        <input type="text" id="contribution-quantity" placeholder="Ex: 10" required>
+                    </div>
+                    <div class="input-group" style="flex:1;">
+                        <label>Preço Unitário (R$)</label>
+                        <input type="text" id="contribution-buy-price" placeholder="R$ 0,00" required>
+                    </div>
                 </div>
 
                 <div class="input-group">
                     <label>Valor Total do Aporte (R$)</label>
-                    <input type="text" id="contribution-total-amount" placeholder="R$ 0,00" required>
-                    <small style="font-size: 0.7rem; color: var(--text-sec);">Total de dinheiro investido nesta compra.</small>
+                    <input type="text" id="contribution-total-amount" placeholder="R$ 0,00" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed; opacity: 0.8;">
+                    <small style="font-size: 0.7rem; color: var(--accent);">Calculado automaticamente: Qtd × Preço</small>
                 </div>
 
                 <div class="input-group">
