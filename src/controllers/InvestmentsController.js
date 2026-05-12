@@ -35,9 +35,9 @@ class InvestmentsController {
         const totalPL = totalCurrent - totalInvested;
         const totalPct = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
-        const investedEl = document.getElementById('inv-total-invested');
-        const currentEl = document.getElementById('inv-total-current');
-        const plEl = document.getElementById('inv-total-pl');
+        const investedEl = document.getElementById('inv-summary-invested');
+        const currentEl = document.getElementById('inv-summary-current');
+        const plEl = document.getElementById('inv-summary-pl');
 
         if (investedEl) investedEl.textContent = formatCurrency(totalInvested);
         if (currentEl) currentEl.textContent = formatCurrency(totalCurrent);
