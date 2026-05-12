@@ -266,6 +266,37 @@
                             <h3>Meu Orçamento (Budget)</h3>
                         </div>
                         <div id="budget-total-summary" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <!-- Import Table & Inline Edits -->
+                            <style>
+                                .edit-inline { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 4px; font-size: 0.85rem; }
+                                .edit-inline-sub { background: transparent; border: none; color: var(--text-sec); width: 100%; padding: 2px 4px; font-size: 0.7rem; font-style: italic; }
+                                .edit-inline-sub:focus { border-bottom: 1px solid var(--accent); outline: none; }
+                                
+                                .edit-inline-select { 
+                                    background: rgba(15,23,42,0.8); 
+                                    color: white; 
+                                    border: 1px solid var(--glass-border); 
+                                    border-radius: 4px; 
+                                    padding: 4px; 
+                                    font-size: 0.75rem; 
+                                    width: 100%;
+                                    cursor: pointer;
+                                }
+                                .edit-inline-select option { background: #1e293b; color: white; }
+
+                                .edit-inline-select-mini {
+                                    background: rgba(0,0,0,0.2);
+                                    color: white;
+                                    border: none;
+                                    border-radius: 4px;
+                                    font-size: 0.65rem;
+                                    padding: 2px 4px;
+                                }
+
+                                .duplicate-row { opacity: 0.6; background: rgba(251,191,36,0.05); }
+                                .import-table th { font-size: 0.7rem; text-transform: uppercase; color: var(--text-sec); padding: 12px 8px; }
+                                .import-table td { padding: 8px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+                            </style>
                             <span style="font-size: 0.8rem; color: var(--text-sec);">Orçamento Total</span>
                             <span id="budget-total-value" style="font-size: 1.1rem; font-weight: 700; color: var(--accent);">R$ 0,00</span>
                         </div>

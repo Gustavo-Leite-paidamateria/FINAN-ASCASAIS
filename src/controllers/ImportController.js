@@ -47,16 +47,22 @@ export default class ImportController {
     autoMatch(transaction, config) {
         const desc = transaction.descricao.toLowerCase();
         
-        // Match Payee
-        const payee = config.payees.find(p => desc.includes(p.name.toLowerCase()));
+        // Identify Type (Income/Expense)
+        transaction.tipo = transaction.valor >= 0 ? 'Receita' : 'Despesa';
+        transaction.valor = Math.abs(transaction.valor); // Store as absolute value
+
+        // Match Payee from Memory
+        const payee = config.payees.find(p => desc.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(desc));
         if (payee) {
             transaction.payee_id = payee.id;
             transaction.categoria = payee.defaultCategory || 'Outros';
+            transaction.savePayee = false; // Already exists
         } else {
             transaction.categoria = 'Outros';
+            transaction.savePayee = true; // Suggest saving new ones
         }
 
-        // Selected by default if not a duplicate
+        transaction.notas = '';
         transaction.selected = !transaction.possibleDuplicate;
     }
 
@@ -68,25 +74,39 @@ export default class ImportController {
 
         tbody.innerHTML = this.pendingTransactions.map((t, index) => `
             <tr class="${t.possibleDuplicate ? 'duplicate-row' : ''}">
-                <td>
+                <td style="text-align:center;">
                     <input type="checkbox" ${t.selected ? 'checked' : ''} 
                         onchange="window.app.importController.toggleSelect(${index})">
                 </td>
-                <td>${new Date(t.data).toLocaleDateString('pt-BR')}</td>
+                <td style="font-size:0.75rem;">${new Date(t.data).toLocaleDateString('pt-BR')}</td>
                 <td>
-                    <input type="text" value="${t.descricao}" class="edit-inline"
-                        onchange="window.app.importController.updateField(${index}, 'descricao', this.value)">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <input type="text" value="${t.descricao}" class="edit-inline" style="font-weight:600;"
+                            onchange="window.app.importController.updateField(${index}, 'descricao', this.value)">
+                        <input type="text" placeholder="Adicionar nota..." class="edit-inline-sub" value="${t.notas || ''}"
+                            onchange="window.app.importController.updateField(${index}, 'notas', this.value)">
+                    </div>
                 </td>
                 <td>
-                    <select onchange="window.app.importController.updateField(${index}, 'categoria', this.value)" class="edit-inline">
-                        ${allCategories.map(c => `<option value="${c}" ${t.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <select onchange="window.app.importController.updateField(${index}, 'categoria', this.value)" class="edit-inline-select">
+                            ${allCategories.map(c => `<option value="${c}" ${t.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                        <label style="font-size:0.6rem; display:flex; align-items:center; gap:4px; opacity:0.8; cursor:pointer;">
+                            <input type="checkbox" ${t.savePayee ? 'checked' : ''} 
+                                onchange="window.app.importController.updateField(${index}, 'savePayee', this.checked)">
+                            Salvar Favorecido
+                        </label>
+                    </div>
+                </td>
+                <td class="${t.tipo === 'Despesa' ? 'expense' : 'income'}" style="text-align:right; font-weight:600;">
+                    ${t.tipo === 'Despesa' ? '-' : '+'}${formatCurrency(t.valor)}
+                </td>
+                <td>
+                    <select onchange="window.app.importController.updateField(${index}, 'tipo', this.value)" class="edit-inline-select-mini">
+                        <option value="Despesa" ${t.tipo === 'Despesa' ? 'selected' : ''}>💸 Desp.</option>
+                        <option value="Receita" ${t.tipo === 'Receita' ? 'selected' : ''}>💰 Rec.</option>
                     </select>
-                </td>
-                <td class="${t.tipo === 'Despesa' ? 'expense' : 'income'}">
-                    ${formatCurrency(t.valor)}
-                </td>
-                <td>
-                    ${t.possibleDuplicate ? '<span class="badge warning">⚠️ Duplicata?</span>' : ''}
                 </td>
             </tr>
         `).join('');
@@ -120,6 +140,26 @@ export default class ImportController {
             return;
         }
 
+        // 1. Save New Payees marked by user
+        for (const t of toImport) {
+            if (t.savePayee && !t.payee_id) {
+                const newPayee = {
+                    id: 'p_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    name: t.descricao,
+                    defaultCategory: t.categoria
+                };
+                config.payees.push(newPayee);
+                t.payee_id = newPayee.id;
+            }
+        }
+        
+        // Sync config if new payees were added
+        if (toImport.some(t => t.savePayee)) {
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+        }
+
+        // 2. Prepare Transaction Records
         const records = toImport.map(t => ({
             tipo: t.tipo,
             valor: t.valor,
@@ -130,7 +170,8 @@ export default class ImportController {
             status: 'Pago',
             observacoes: JSON.stringify({
                 owner: 'ambos',
-                conta_id: walletId
+                conta_id: walletId,
+                nota: t.notas || ''
             }),
             payee_id: t.payee_id || null
         }));
