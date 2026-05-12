@@ -456,25 +456,6 @@ class App {
             });
         }
 
-        // Investment events
-        const addInvBtn = document.getElementById('add-inv-btn');
-        if (addInvBtn) {
-            addInvBtn.addEventListener('click', () => this.investmentsController.openAddModal());
-        }
-
-        const closeInvModal = document.getElementById('close-inv-modal');
-        if (closeInvModal) {
-            closeInvModal.addEventListener('click', () =>
-                document.getElementById('inv-modal')?.classList.add('hidden'));
-        }
-
-        const invForm = document.getElementById('inv-form');
-        if (invForm) {
-            invForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.investmentsController.add(this.config);
-            });
-        }
     }
 
     setupNavigation() {
