@@ -12,12 +12,6 @@ class InvestmentsController {
         this.renderCryptoList(config);
         this.renderCustomList(config);
 
-        // Registrar listeners para cálculos automáticos uma única vez
-        if (!this._listenersSet) {
-            this.setupAutoCalcListeners();
-            this._listenersSet = true;
-        }
-
         // Somente inicia o refresh se não houver um em andamento
         if (!this._isRefreshing) {
             this.refreshPrices(config);
@@ -457,33 +451,30 @@ class InvestmentsController {
     }
 
     setupAutoCalcListeners() {
-        // Para Novo Investimento
-        const invQty = document.getElementById('inv-quantity');
-        const invPrice = document.getElementById('inv-buy-price');
-        const invTotal = document.getElementById('inv-total-invested');
+        const calculate = (qtyId, priceId, totalId) => {
+            const qtyEl = document.getElementById(qtyId);
+            const priceEl = document.getElementById(priceId);
+            const totalEl = document.getElementById(totalId);
 
-        const calcNew = () => {
-            const q = this.parseMoney(invQty.value) || 0;
-            const p = this.parseMoney(invPrice.value) || 0;
-            if (invTotal) invTotal.value = formatCurrency(q * p);
+            if (!qtyEl || !priceEl || !totalEl) return;
+
+            const update = () => {
+                const q = this.parseMoney(qtyEl.value) || 0;
+                const p = this.parseMoney(priceEl.value) || 0;
+                totalEl.value = formatCurrency(q * p);
+            };
+
+            qtyEl.addEventListener('input', update);
+            priceEl.addEventListener('input', update);
+            qtyEl.addEventListener('blur', update);
+            priceEl.addEventListener('blur', update);
         };
 
-        if (invQty) invQty.addEventListener('input', calcNew);
-        if (invPrice) invPrice.addEventListener('input', calcNew);
+        // Modal Novo Investimento
+        calculate('inv-quantity', 'inv-buy-price', 'inv-total-invested');
 
-        // Para Aporte
-        const contQty = document.getElementById('contribution-quantity');
-        const contPrice = document.getElementById('contribution-buy-price');
-        const contTotal = document.getElementById('contribution-total-amount');
-
-        const calcCont = () => {
-            const q = this.parseMoney(contQty.value) || 0;
-            const p = this.parseMoney(contPrice.value) || 0;
-            if (contTotal) contTotal.value = formatCurrency(q * p);
-        };
-
-        if (contQty) contQty.addEventListener('input', calcCont);
-        if (contPrice) contPrice.addEventListener('input', calcCont);
+        // Modal Aporte
+        calculate('contribution-quantity', 'contribution-buy-price', 'contribution-total-amount');
     }
 }
 
