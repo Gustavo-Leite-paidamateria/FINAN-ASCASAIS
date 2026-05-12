@@ -166,7 +166,10 @@ class App {
 
         const addInvBtn = document.getElementById('add-inv-btn');
         if (addInvBtn) {
-            addInvBtn.addEventListener('click', () => this.investmentsController.openAddModal());
+            addInvBtn.addEventListener('click', () => {
+                this.investmentsController.openAddModal();
+                this.investmentsController.setupAutoCalcListeners();
+            });
         }
 
         // Ativa o cálculo automático de Investimentos (Qtd x Preço)

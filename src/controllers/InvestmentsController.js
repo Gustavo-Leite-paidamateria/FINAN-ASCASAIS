@@ -462,15 +462,24 @@ class InvestmentsController {
             if (!qtyEl || !priceEl || !totalEl) return;
 
             const update = () => {
-                const q = this.parseMoney(qtyEl.value) || 0;
-                const p = this.parseMoney(priceEl.value) || 0;
-                totalEl.value = formatCurrency(q * p);
+                // Remove qualquer caractere não numérico exceto ponto e vírgula para o cálculo
+                const parseLocal = (val) => {
+                    if (!val) return 0;
+                    const cleaned = val.replace(/[^\d,.]/g, '').replace(',', '.');
+                    return parseFloat(cleaned) || 0;
+                };
+
+                const q = parseLocal(qtyEl.value);
+                const p = parseLocal(priceEl.value);
+                const total = q * p;
+                
+                totalEl.value = formatCurrency(total);
             };
 
-            qtyEl.addEventListener('input', update);
-            priceEl.addEventListener('input', update);
-            qtyEl.addEventListener('blur', update);
-            priceEl.addEventListener('blur', update);
+            ['input', 'keyup', 'change', 'paste'].forEach(evt => {
+                qtyEl.addEventListener(evt, update);
+                priceEl.addEventListener(evt, update);
+            });
         };
 
         // Modal Novo Investimento
