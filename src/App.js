@@ -164,6 +164,11 @@ class App {
             });
         }
 
+        const addInvBtn = document.getElementById('add-inv-btn');
+        if (addInvBtn) {
+            addInvBtn.addEventListener('click', () => this.investmentsController.openAddModal());
+        }
+
         const closeInvModal = document.getElementById('close-inv-modal');
         if (closeInvModal) {
             closeInvModal.addEventListener('click', () => this.investmentsController.closeModal());
