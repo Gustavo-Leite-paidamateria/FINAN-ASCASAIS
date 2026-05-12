@@ -67,6 +67,16 @@ class TransactionController {
             });
         }
 
+        const walletSelect = document.getElementById('trans-wallet');
+        if (walletSelect && config) {
+            walletSelect.innerHTML = config.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        }
+
+        const cardSelect = document.getElementById('trans-card');
+        if (cardSelect && config) {
+            cardSelect.innerHTML = config.cards.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
         const targetWalletSelect = document.getElementById('trans-target-wallet');
         if (targetWalletSelect && config) {
             targetWalletSelect.innerHTML = config.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
@@ -76,7 +86,6 @@ class TransactionController {
         if (cardInvoiceInfo) cardInvoiceInfo.innerHTML = '';
         
         setTimeout(() => {
-            const cardSelect = document.getElementById('trans-card');
             if (cardSelect && cardSelect.value) {
                 this.onCardChange(config);
             }
