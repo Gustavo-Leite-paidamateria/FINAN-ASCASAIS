@@ -57,8 +57,8 @@ export default class ImportService {
         const patterns = {
             date: [/data/, /data.*mov/, /data.*lan/, /date/, /vencimento/, /competencia/],
             amount: [/valor/, /amount/, /val[or]?/, /r\$/, /preço/, /preco/, /saldo/],
-            desc: [/descriç/, /descricao/, /historico/, /histórico/, /description/, /nome/, /memo/, /identificador/],
-            type: [/tipo/, /type/, /entrada/, /saida/, /débito/, /credito/, /debito/, /crédito/],
+            desc: [/descriç/, /descricao/, /historico/, /histórico/, /description/, /nome/, /memo/, /identificador/, /origem/, /destino/],
+            type: [/tipo/, /type/, /entrada/, /saida/, /débito/, /credito/, /debito/, /crédito/, /pagamento/],
             doc: [/documento/, /doc/, /num/, /número/]
         };
 
@@ -86,15 +86,39 @@ export default class ImportService {
         const parseAmount = (str) => {
             if (!str) return NaN;
             str = str.replace(/['"]/g, '').trim();
-            str = str.replace(/\./g, '').replace(',', '.');
+            // Brazilian format: 1.234,56 → detect by comma being last separator
+            if (str.includes(',') && (!str.includes('.') || str.lastIndexOf(',') > str.lastIndexOf('.'))) {
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                str = str.replace(',', '');
+            }
             str = str.replace(/[^0-9.\-]/g, '');
             return parseFloat(str);
+        };
+
+        const parseRow = (line) => {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    inQuotes = !inQuotes;
+                } else if (ch === delimiter && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            result.push(current);
+            return result;
         };
 
         const transactions = [];
 
         for (let i = 1; i < lines.length; i++) {
-            const row = lines[i].split(delimiter);
+            const row = parseRow(lines[i]);
             
             let date = null;
             let amount = NaN;
@@ -114,11 +138,9 @@ export default class ImportService {
             } else if (colMap.doc !== -1 && row[colMap.doc]) {
                 desc = row[colMap.doc].replace(/['"]/g, '').trim();
             }
-            
+
             if (colMap.type !== -1 && row[colMap.type]) {
                 tipo = row[colMap.type].toLowerCase();
-            } else if (!desc && colMap.doc !== -1 && row[colMap.doc]) {
-                desc = row[colMap.doc].replace(/['"]/g, '').trim();
             }
 
             if (!desc) desc = 'Sem descrição';
@@ -127,7 +149,7 @@ export default class ImportService {
                 const isExpense = tipo.includes('saída') || tipo.includes('débito') || tipo.includes('despesa') || 
                                   tipo.includes('debito') || amount < 0;
                 transactions.push({
-                    tipo: (tipo.includes('receita') || tipo.includes('entrada') || amount < 0 === false && !isExpense) && amount >= 0 ? 'Receita' : 'Despesa',
+                    tipo: isExpense ? 'Despesa' : 'Receita',
                     valor: Math.abs(amount),
                     descricao: desc.substring(0, 255),
                     data: date.toISOString(),
