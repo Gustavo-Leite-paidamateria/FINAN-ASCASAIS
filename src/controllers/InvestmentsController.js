@@ -275,8 +275,19 @@ class InvestmentsController {
                 ticker = type === 'b3'
                     ? document.getElementById('inv-b3-ticker')?.value?.trim().toUpperCase()
                     : document.getElementById('inv-crypto-id')?.value?.trim().toLowerCase();
-                buyPrice = parseFloat(document.getElementById('inv-buy-price')?.value) || 0;
-                totalInvested = parseFloat(document.getElementById('inv-total-invested')?.value) || 0;
+                const parseMoney = (val) => {
+                    if (!val) return 0;
+                    // Remove currency symbols, spaces and thousands separators (dots)
+                    // Then replace comma with dot for decimals
+                    const cleaned = val.toString()
+                        .replace(/[R$\s]/g, '')
+                        .replace(/\./g, '')
+                        .replace(',', '.');
+                    return parseFloat(cleaned) || 0;
+                };
+
+                buyPrice = parseMoney(document.getElementById('inv-buy-price')?.value);
+                totalInvested = parseMoney(document.getElementById('inv-total-invested')?.value);
                 purchaseDate = document.getElementById('inv-date')?.value || purchaseDate;
 
                 if (!ticker) {
@@ -289,8 +300,14 @@ class InvestmentsController {
                 }
                 quantity = totalInvested / buyPrice;
             } else {
-                totalInvested = parseFloat(document.getElementById('inv-custom-amount')?.value) || 0;
-                monthlyReturn = parseFloat(document.getElementById('inv-monthly-return')?.value) || 0;
+                const parseMoney = (val) => {
+                    if (!val) return 0;
+                    const cleaned = val.toString().replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+                    return parseFloat(cleaned) || 0;
+                };
+
+                totalInvested = parseMoney(document.getElementById('inv-custom-amount')?.value);
+                monthlyReturn = parseMoney(document.getElementById('inv-monthly-return')?.value);
                 startDate = document.getElementById('inv-start-date')?.value || new Date().toISOString().split('T')[0];
                 durationMonths = parseInt(document.getElementById('inv-duration')?.value) || 0;
 
