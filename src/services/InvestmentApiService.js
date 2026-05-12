@@ -108,6 +108,22 @@ class InvestmentApiService {
         return investments;
     }
 
+    async searchB3(query) {
+        if (!query || query.length < 2) return [];
+        try {
+            const response = await fetch(`https://brapi.dev/api/available?search=${query}&token=dE88iQgZ3mcLyGr6hxXwmo`);
+            if (!response.ok) return [];
+            const json = await response.json();
+            return (json.stocks || []).slice(0, 10).map(s => ({
+                ticker: s,
+                name: s
+            }));
+        } catch (e) {
+            console.warn('BRAPI search failed', e);
+            return [];
+        }
+    }
+
     getCryptoSearchUrl(query) {
         return `https://api.coingecko.com/api/v3/search?query=${query}`;
     }

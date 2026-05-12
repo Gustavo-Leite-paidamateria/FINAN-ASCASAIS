@@ -202,6 +202,39 @@ class InvestmentsController {
         document.getElementById('inv-form')?.reset();
         this.setTypeFields('b3');
         document.getElementById('inv-modal')?.classList.remove('hidden');
+        this.initSearchHandlers();
+    }
+
+    initSearchHandlers() {
+        const b3Input = document.getElementById('inv-b3-ticker');
+        const cryptoInput = document.getElementById('inv-crypto-id');
+
+        if (b3Input) {
+            b3Input.removeEventListener('input', this.handleB3Search);
+            b3Input.addEventListener('input', (e) => this.handleB3Search(e.target.value));
+        }
+        if (cryptoInput) {
+            cryptoInput.removeEventListener('input', this.handleCryptoSearch);
+            cryptoInput.addEventListener('input', (e) => this.handleCryptoSearch(e.target.value));
+        }
+    }
+
+    async handleB3Search(query) {
+        if (!query || query.length < 2) return;
+        const suggestions = await investmentApiService.searchB3(query);
+        const datalist = document.getElementById('b3-suggestions');
+        if (datalist) {
+            datalist.innerHTML = suggestions.map(s => `<option value="${s.ticker}">${s.name}</option>`).join('');
+        }
+    }
+
+    async handleCryptoSearch(query) {
+        if (!query || query.length < 2) return;
+        const suggestions = await investmentApiService.searchCrypto(query);
+        const datalist = document.getElementById('crypto-suggestions');
+        if (datalist) {
+            datalist.innerHTML = suggestions.map(s => `<option value="${s.id}">${s.name} (${s.symbol.toUpperCase()})</option>`).join('');
+        }
     }
 
     setTypeFields(type) {

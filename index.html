@@ -1583,16 +1583,18 @@
                 <div id="inv-b3-fields">
                     <div class="input-group">
                         <label>Ticker (ex: PETR4, VALE3, ITUB4)</label>
-                        <input type="text" id="inv-b3-ticker" placeholder="Ex: PETR4">
+                        <input type="text" id="inv-b3-ticker" list="b3-suggestions" placeholder="Ex: PETR4">
+                        <datalist id="b3-suggestions"></datalist>
                     </div>
                 </div>
 
                 <!-- Crypto Fields -->
                 <div id="inv-crypto-fields" class="hidden">
                     <div class="input-group">
-                        <label>ID da Moeda (CoinGecko — ex: bitcoin, ethereum)</label>
-                        <input type="text" id="inv-crypto-id" placeholder="Ex: bitcoin">
-                        <small style="color:var(--text-sec);font-size:0.7rem;">Consulte <a href="https://www.coingecko.com" target="_blank" style="color:var(--accent);">CoinGecko</a> para IDs</small>
+                        <label>ID da Moeda (ex: bitcoin, ethereum)</label>
+                        <input type="text" id="inv-crypto-id" list="crypto-suggestions" placeholder="Ex: bitcoin">
+                        <datalist id="crypto-suggestions"></datalist>
+                        <small style="color:var(--text-sec);font-size:0.7rem;">Sugestões automáticas ao digitar</small>
                     </div>
                 </div>
 
