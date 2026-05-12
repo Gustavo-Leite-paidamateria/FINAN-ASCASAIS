@@ -11,14 +11,43 @@ class InvestmentsController {
         this.renderB3List(config);
         this.renderCryptoList(config);
         this.renderCustomList(config);
+
+        // Somente inicia o refresh se não houver um em andamento
+        if (!this._isRefreshing) {
+            this.refreshPrices(config);
+        }
     }
 
     async refreshPrices(config) {
-        const updated = await investmentApiService.refreshIfNeeded(config.investments);
-        if (updated !== config.investments) {
-            storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
-            this.render(config);
+        if (this._isRefreshing) return;
+        this._isRefreshing = true;
+
+        try {
+            const investments = config.investments || [];
+            if (investments.length === 0) return;
+
+            const needsRefresh = investments.some(inv => {
+                if (inv.type === 'custom') return false;
+                if (!inv.lastPriceUpdate) return true;
+                const hoursSinceUpdate = (Date.now() - new Date(inv.lastPriceUpdate).getTime()) / (1000 * 60 * 60);
+                return hoursSinceUpdate >= 1;
+            });
+
+            if (needsRefresh) {
+                await investmentApiService.refreshPrices(investments);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                
+                // Re-renderiza sem disparar o refresh de novo
+                this.renderSummary(config);
+                this.renderB3List(config);
+                this.renderCryptoList(config);
+                this.renderCustomList(config);
+            }
+        } catch (e) {
+            console.error('Error refreshing investment prices:', e);
+        } finally {
+            this._isRefreshing = false;
         }
     }
 
