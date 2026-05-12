@@ -11,9 +11,6 @@ class InvestmentsController {
         this.renderB3List(config);
         this.renderCryptoList(config);
         this.renderCustomList(config);
-
-        // Refresh prices in background
-        this.refreshPrices(config);
     }
 
     async refreshPrices(config) {

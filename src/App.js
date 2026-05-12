@@ -605,11 +605,10 @@ class App {
                 🏠 ${w.workspaces?.name || 'Meu Espaço'}
             </option>
         `).join('');
-        
-        this.refreshHeader(this.config);
     }
 
     refreshHeader(config) {
+        if (!config) return;
         const greetingEl = document.getElementById('user-greeting');
         const avatarImg = document.getElementById('avatar-img');
         const avatarIcon = document.getElementById('avatar-icon');
