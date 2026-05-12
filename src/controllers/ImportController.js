@@ -1,5 +1,6 @@
 import { ImportService, supabaseService, notificationService } from '../services/index.js';
 import { formatCurrency } from '../utils/index.js';
+import { CATEGORIES, INCOME_CATEGORIES } from '../models/index.js';
 
 export default class ImportController {
     constructor() {
@@ -63,7 +64,7 @@ export default class ImportController {
         const tbody = document.getElementById('import-table-body');
         if (!tbody) return;
 
-        const categories = ["Mercado", "Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Pets", "Compras", "Educação", "Viagem", "Presentes", "Investimentos", "Assinaturas", "Outros"];
+        const allCategories = [...new Set([...CATEGORIES, ...INCOME_CATEGORIES])];
 
         tbody.innerHTML = this.pendingTransactions.map((t, index) => `
             <tr class="${t.possibleDuplicate ? 'duplicate-row' : ''}">
@@ -78,7 +79,7 @@ export default class ImportController {
                 </td>
                 <td>
                     <select onchange="window.app.importController.updateField(${index}, 'categoria', this.value)" class="edit-inline">
-                        ${categories.map(c => `<option value="${c}" ${t.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
+                        ${allCategories.map(c => `<option value="${c}" ${t.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
                     </select>
                 </td>
                 <td class="${t.tipo === 'Despesa' ? 'expense' : 'income'}">

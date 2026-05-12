@@ -280,6 +280,12 @@ class App {
             });
         });
 
+        document.querySelectorAll('input[name="trans-type"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.transactionController.renderCategoryGrid(radio.value);
+            });
+        });
+
         const toggleSplitBtn = document.getElementById('toggle-split-btn');
         if (toggleSplitBtn) {
             toggleSplitBtn.addEventListener('click', () => 
@@ -382,7 +388,13 @@ class App {
         const transPayee = document.getElementById('trans-payee');
         if (transPayee) {
             transPayee.addEventListener('change', () => this.transactionController.onPayeeChange(this.config));
+            transPayee.addEventListener('input', () => this.transactionController.onPayeeChange(this.config));
         }
+
+        document.getElementById('payee-prompt-register')?.addEventListener('click', () => 
+            this.transactionController.onPayeeRegister(this.config));
+        document.getElementById('payee-prompt-skip')?.addEventListener('click', () => 
+            this.transactionController.onPayeeSkip());
 
         const closePayeeModal = document.getElementById('close-payee-modal');
         if (closePayeeModal) {

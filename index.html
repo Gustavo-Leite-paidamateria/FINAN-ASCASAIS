@@ -409,7 +409,9 @@
                         <h3>👥 Favorecidos</h3>
                         <button onclick="window.app.openPayeeManager()" class="btn-text">Gerenciar</button>
                     </div>
-                    <p class="subtitle" style="text-align: left; font-size: 0.8rem;">Contatos frequentes para pagamentos e recebimentos.</p>
+                    <div id="favorecidos-list" class="scroll-list">
+                        <div class="empty-state">Nenhum favorecido cadastrado.</div>
+                    </div>
                 </div>
 
                 <div class="glass-card mt-4">
@@ -785,6 +787,11 @@
                     <label>Favorecido</label>
                     <input type="text" id="trans-payee" list="payees-datalist" placeholder="Quem recebeu/pagou?">
                     <datalist id="payees-datalist"></datalist>
+                    <div id="payee-prompt" class="hidden" style="margin-top: 8px; padding: 8px 12px; background: rgba(251,191,36,0.1); border-radius: 8px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="color: #fbbf24; flex: 1;">👤 Favorecido não cadastrado.</span>
+                        <button type="button" id="payee-prompt-register" class="btn-primary" style="padding: 4px 12px; font-size: 0.75rem;">Cadastrar</button>
+                        <button type="button" id="payee-prompt-skip" class="btn-secondary" style="padding: 4px 12px; font-size: 0.75rem;">Apenas esta vez</button>
+                    </div>
                 </div>
 
                 <div class="input-group">
@@ -794,38 +801,7 @@
 
                 <div class="input-group">
                     <label>Categoria</label>
-                    <div class="category-grid">
-                        <input type="radio" name="trans-category" id="cat-mercado" value="Mercado" checked hidden>
-                        <label for="cat-mercado" class="cat-card"><i class="fa-solid fa-cart-shopping"></i><span>Mercado</span></label>
-                        <input type="radio" name="trans-category" id="cat-alimentacao" value="Alimentação" hidden>
-                        <label for="cat-alimentacao" class="cat-card"><i class="fa-solid fa-utensils"></i><span>Alimentação</span></label>
-                        <input type="radio" name="trans-category" id="cat-transporte" value="Transporte" hidden>
-                        <label for="cat-transporte" class="cat-card"><i class="fa-solid fa-car"></i><span>Transporte</span></label>
-                        <input type="radio" name="trans-category" id="cat-casa" value="Casa" hidden>
-                        <label for="cat-casa" class="cat-card"><i class="fa-solid fa-house"></i><span>Casa</span></label>
-                        <input type="radio" name="trans-category" id="cat-lazer" value="Lazer" hidden>
-                        <label for="cat-lazer" class="cat-card"><i class="fa-solid fa-gamepad"></i><span>Lazer</span></label>
-                        
-                        <input type="radio" name="trans-category" id="cat-saude" value="Saúde" hidden>
-                        <label for="cat-saude" class="cat-card"><i class="fa-solid fa-house-medical"></i><span>Saúde</span></label>
-                        <input type="radio" name="trans-category" id="cat-pets" value="Pets" hidden>
-                        <label for="cat-pets" class="cat-card"><i class="fa-solid fa-paw"></i><span>Pets</span></label>
-                        <input type="radio" name="trans-category" id="cat-compras" value="Compras" hidden>
-                        <label for="cat-compras" class="cat-card"><i class="fa-solid fa-bag-shopping"></i><span>Compras</span></label>
-                        <input type="radio" name="trans-category" id="cat-educacao" value="Educação" hidden>
-                        <label for="cat-educacao" class="cat-card"><i class="fa-solid fa-book"></i><span>Educação</span></label>
-                        <input type="radio" name="trans-category" id="cat-viagem" value="Viagem" hidden>
-                        <label for="cat-viagem" class="cat-card"><i class="fa-solid fa-plane"></i><span>Viagem</span></label>
-                        <input type="radio" name="trans-category" id="cat-presentes" value="Presentes" hidden>
-                        <label for="cat-presentes" class="cat-card"><i class="fa-solid fa-gift"></i><span>Presentes</span></label>
-                        <input type="radio" name="trans-category" id="cat-investimentos" value="Investimentos" hidden>
-                        <label for="cat-investimentos" class="cat-card"><i class="fa-solid fa-chart-line"></i><span>Investimentos</span></label>
-                        <input type="radio" name="trans-category" id="cat-assinaturas" value="Assinaturas" hidden>
-                        <label for="cat-assinaturas" class="cat-card"><i class="fa-solid fa-tv"></i><span>Assinaturas</span></label>
-                        
-                        <input type="radio" name="trans-category" id="cat-outros" value="Outros" hidden>
-                        <label for="cat-outros" class="cat-card"><i class="fa-solid fa-ellipsis"></i><span>Outros</span></label>
-                    </div>
+                    <div class="category-grid" id="category-grid"></div>
                 </div>
 
                 <div class="input-group">
@@ -1091,20 +1067,30 @@
                     <div class="input-group" style="flex: 1;">
                         <label>Categoria Padrão</label>
                         <select id="payee-new-cat" class="w-full" style="background: rgba(15,23,42,0.6); color: white; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
-                            <option value="Mercado">Mercado</option>
-                            <option value="Alimentação">Alimentação</option>
-                            <option value="Transporte">Transporte</option>
-                            <option value="Casa">Casa</option>
-                            <option value="Lazer">Lazer</option>
-                            <option value="Saúde">Saúde</option>
-                            <option value="Pets">Pets</option>
-                            <option value="Compras">Compras</option>
-                            <option value="Educação">Educação</option>
-                            <option value="Viagem">Viagem</option>
-                            <option value="Presentes">Presentes</option>
-                            <option value="Investimentos">Investimentos</option>
-                            <option value="Assinaturas">Assinaturas</option>
-                            <option value="Outros">Outros</option>
+                            <optgroup label="Despesas">
+                                <option value="Mercado">Mercado</option>
+                                <option value="Alimentação">Alimentação</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Casa">Casa</option>
+                                <option value="Lazer">Lazer</option>
+                                <option value="Saúde">Saúde</option>
+                                <option value="Pets">Pets</option>
+                                <option value="Compras">Compras</option>
+                                <option value="Educação">Educação</option>
+                                <option value="Viagem">Viagem</option>
+                                <option value="Assinaturas">Assinaturas</option>
+                            </optgroup>
+                            <optgroup label="Receitas">
+                                <option value="Salário">Salário</option>
+                                <option value="Freelance">Freelance</option>
+                                <option value="Vendas">Vendas</option>
+                                <option value="Renda Extra">Renda Extra</option>
+                            </optgroup>
+                            <optgroup label="Ambos">
+                                <option value="Presentes">Presentes</option>
+                                <option value="Investimentos">Investimentos</option>
+                                <option value="Outros">Outros</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>

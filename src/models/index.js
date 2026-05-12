@@ -21,6 +21,31 @@ const DEFAULT_BUDGETS = {
     "Outros": 200
 };
 
+export const INCOME_CATEGORIES = [
+    "Salário", "Freelance", "Vendas", "Renda Extra",
+    "Investimentos", "Presentes", "Outros"
+];
+
+export const INCOME_CATEGORY_ICONS = {
+    "Salário": "fa-sack-dollar",
+    "Freelance": "fa-laptop-code",
+    "Vendas": "fa-store",
+    "Renda Extra": "fa-hand-holding-dollar",
+    "Investimentos": "fa-chart-line",
+    "Presentes": "fa-gift",
+    "Outros": "fa-ellipsis"
+};
+
+export const INCOME_CATEGORY_EMOJIS = {
+    "Salário": "💰",
+    "Freelance": "💻",
+    "Vendas": "🏪",
+    "Renda Extra": "✨",
+    "Investimentos": "📈",
+    "Presentes": "🎁",
+    "Outros": "📦"
+};
+
 export const FIXED_CATEGORIES = ["Casa", "Transporte", "Saúde", "Pets", "Assinaturas", "Educação"];
 
 export const CATEGORY_ICONS = {

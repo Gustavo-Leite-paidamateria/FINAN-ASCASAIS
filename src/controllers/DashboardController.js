@@ -1,4 +1,4 @@
-import { Transaction, FIXED_CATEGORIES, CATEGORY_EMOJIS, CATEGORY_ICONS, UserConfig, ScheduledBill, Installment, Card, Wallet, Goal } from '../models/index.js';
+import { Transaction, FIXED_CATEGORIES, CATEGORY_EMOJIS, CATEGORY_ICONS, INCOME_CATEGORY_EMOJIS, INCOME_CATEGORY_ICONS, UserConfig, ScheduledBill, Installment, Card, Wallet, Goal } from '../models/index.js';
 import { supabaseService, storageService, notificationService } from '../services/index.js';
 import { formatCurrency, getMonthDateRange, formatMonthYear, getDaysInMonth, SpiritualMentor } from '../utils/index.js';
 
@@ -535,7 +535,7 @@ class DashboardController {
         });
     }
 
-    renderTransactions() {
+    renderTransactions(config) {
         let filtered = this.filter === 'all' 
             ? this.transactions 
             : this.transactions.filter(t => t.owner === this.filter);
@@ -546,6 +546,11 @@ class DashboardController {
 
         const container = document.getElementById('transactions-list');
         const allContainer = document.getElementById('all-transactions-list');
+
+        const payeeMap = {};
+        if (config) {
+            config.payees.forEach(p => { payeeMap[p.id] = p.name; });
+        }
         
         const renderList = (el) => {
             if (!el) return;
@@ -558,16 +563,19 @@ class DashboardController {
             el.innerHTML = filtered.map(t => {
                 const sign = t.tipo === 'Despesa' ? '-' : '+';
                 const subTag = t.is_subscription ? '<span class="tag-sub">📺 Assinatura</span>' : '';
-                const emoji = CATEGORY_EMOJIS[t.categoria] || '💰';
-                const icon = CATEGORY_ICONS[t.categoria] || 'fa-wallet';
+                const isIncome = t.tipo === 'Receita';
+                const emoji = isIncome ? (INCOME_CATEGORY_EMOJIS[t.categoria] || '💰') : (CATEGORY_EMOJIS[t.categoria] || '💰');
+                const icon = isIncome ? (INCOME_CATEGORY_ICONS[t.categoria] || 'fa-wallet') : (CATEGORY_ICONS[t.categoria] || 'fa-wallet');
                 const ownerText = t.owner === 'esposa' ? 'Ela' : t.owner === 'ambos' ? 'Ambos' : 'Eu';
+                const payeeName = t.payee_id ? payeeMap[t.payee_id] : null;
+                const payeeTag = payeeName ? `<span class="tag-payee"><i class="fa-solid fa-user"></i> ${payeeName}</span>` : '';
                 
                 return `
                     <div class="transaction-item">
                         <div class="t-info">
                             <div class="t-icon"><i class="fa-solid ${icon}"></i></div>
                             <div class="t-details">
-                                <h5>${emoji} ${t.categoria} ${subTag}</h5>
+                                <h5>${emoji} ${t.categoria} ${subTag} ${payeeTag}</h5>
                                 <p>${t.descricao}</p>
                             </div>
                         </div>
@@ -763,12 +771,33 @@ class DashboardController {
         this.renderMetrics(config);
         this.renderBudgets(config);
         this.renderCharts();
-        this.renderTransactions();
+        this.renderTransactions(config);
         this.renderGoals(config);
         this.renderScheduledBills(config);
         this.renderCardBills(config);
+        this.renderFavorecidos(config);
         this.renderGamificationBadge(config);
         this.renderPayeeFilter(config);
+    }
+
+    renderFavorecidos(config) {
+        const container = document.getElementById('favorecidos-list');
+        if (!container) return;
+
+        const payees = config.payees || [];
+        if (payees.length === 0) {
+            container.innerHTML = '<div class="empty-state">Nenhum favorecido cadastrado.</div>';
+            return;
+        }
+
+        container.innerHTML = payees.map(p => `
+            <div class="config-item">
+                <div class="config-info">
+                    <strong><i class="fa-solid fa-user"></i> ${p.name}</strong>
+                    <span class="subtitle">Categoria: ${p.defaultCategory}</span>
+                </div>
+            </div>
+        `).join('');
     }
 
     renderPayeeFilter(config) {

@@ -1,4 +1,4 @@
-import { Transaction, Installment, ScheduledBill, Card } from '../models/index.js';
+import { Transaction, Installment, ScheduledBill, Card, CATEGORIES, CATEGORY_ICONS, INCOME_CATEGORIES, INCOME_CATEGORY_ICONS } from '../models/index.js';
 import { supabaseService, storageService, notificationService } from '../services/index.js';
 import { formatCurrency } from '../utils/index.js';
 
@@ -7,6 +7,8 @@ class TransactionController {
         this.isSplitMode = false;
         this.splitItems = [];
         this.editingId = null;
+        this.skipPayeeCreate = new Set();
+        this._currentNewPayee = null;
     }
 
     openModal(config) {
@@ -79,12 +81,41 @@ class TransactionController {
                 this.onCardChange(config);
             }
         }, 100);
+
+        this.renderCategoryGrid();
         
         modal.classList.remove('hidden');
     }
 
+    renderCategoryGrid(tipo) {
+        const grid = document.getElementById('category-grid');
+        if (!grid) return;
+
+        const isIncome = tipo === 'income' || document.querySelector('input[name="trans-type"]:checked')?.value === 'income';
+        const categories = isIncome ? INCOME_CATEGORIES : CATEGORIES;
+        const icons = isIncome ? INCOME_CATEGORY_ICONS : CATEGORY_ICONS;
+
+        grid.innerHTML = categories.map(cat => {
+            const id = 'cat-' + cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
+            const icon = icons[cat] || 'fa-ellipsis';
+            return `
+                <input type="radio" name="trans-category" id="${id}" value="${cat}" hidden>
+                <label for="${id}" class="cat-card"><i class="fa-solid ${icon}"></i><span>${cat}</span></label>
+            `;
+        }).join('');
+
+        // Auto-check first category if none selected
+        const firstRadio = grid.querySelector('input[name="trans-category"]');
+        if (firstRadio && !grid.querySelector('input[name="trans-category"]:checked')) {
+            firstRadio.checked = true;
+        }
+    }
+
     closeModal() {
         document.getElementById('add-modal')?.classList.add('hidden');
+        document.getElementById('payee-prompt')?.classList.add('hidden');
+        this.skipPayeeCreate.clear();
+        this._currentNewPayee = null;
     }
 
     onLinkBillChange(config) {
@@ -111,7 +142,10 @@ class TransactionController {
 
         // Tipo = Despesa
         const expenseRadio = document.getElementById('type-expense');
-        if (expenseRadio) expenseRadio.checked = true;
+        if (expenseRadio) {
+            expenseRadio.checked = true;
+            this.renderCategoryGrid('expense');
+        }
 
         // Auto-fill owner
         const ownerMap = { 'eu': 'owner-me', 'esposa': 'owner-her', 'ambos': 'owner-both' };
@@ -211,9 +245,16 @@ class TransactionController {
         let payeeId = null;
 
         if (payeeName) {
-            const payee = await window.app.payeeController.ensurePayee(config, payeeName);
-            payeeId = payee?.id;
+            if (this.skipPayeeCreate.has(payeeName.toLowerCase())) {
+                payeeId = null;
+            } else {
+                const payee = await window.app.payeeController.ensurePayee(config, payeeName);
+                payeeId = payee?.id;
+            }
         }
+
+        this.skipPayeeCreate.clear();
+        this._currentNewPayee = null;
         
         if (this.isSplitMode) {
             const totalSplit = this.splitItems.reduce((acc, curr) => acc + curr.amount, 0);
@@ -533,14 +574,50 @@ class TransactionController {
     }
 
     onPayeeChange(config) {
-        const payeeName = document.getElementById('trans-payee')?.value;
-        if (!payeeName) return;
+        const payeeName = document.getElementById('trans-payee')?.value?.trim();
+        const prompt = document.getElementById('payee-prompt');
+        if (!prompt) return;
 
-        const payee = config.payees.find(p => p.name === payeeName);
-        if (payee && payee.defaultCategory) {
-            const catRadio = document.querySelector(`input[name="trans-category"][value="${payee.defaultCategory}"]`);
-            if (catRadio) catRadio.checked = true;
+        if (!payeeName) {
+            prompt.classList.add('hidden');
+            this._currentNewPayee = null;
+            return;
         }
+
+        const exists = config.payees.some(p => p.name.toLowerCase() === payeeName.toLowerCase());
+
+        if (exists) {
+            prompt.classList.add('hidden');
+            this._currentNewPayee = null;
+            const payee = config.payees.find(p => p.name.toLowerCase() === payeeName.toLowerCase());
+            if (payee && payee.defaultCategory) {
+                const catRadio = document.querySelector(`input[name="trans-category"][value="${payee.defaultCategory}"]`);
+                if (catRadio) catRadio.checked = true;
+            }
+        } else {
+            this._currentNewPayee = payeeName;
+            prompt.classList.remove('hidden');
+        }
+    }
+
+    onPayeeRegister(config) {
+        const name = this._currentNewPayee;
+        if (!name) return;
+
+        window.app.payeeController.ensurePayee(config, name);
+        this.skipPayeeCreate.delete(name.toLowerCase());
+        document.getElementById('payee-prompt')?.classList.add('hidden');
+        this._currentNewPayee = null;
+        notificationService.success('Favorecido', `"${name}" cadastrado com sucesso!`);
+    }
+
+    onPayeeSkip() {
+        const name = this._currentNewPayee;
+        if (name) {
+            this.skipPayeeCreate.add(name.toLowerCase());
+        }
+        document.getElementById('payee-prompt')?.classList.add('hidden');
+        this._currentNewPayee = null;
     }
 
     async edit(id) {
@@ -553,7 +630,9 @@ class TransactionController {
             document.getElementById('trans-desc').value = trans.descricao;
             document.getElementById('trans-date').value = new Date(trans.data).toISOString().split('T')[0];
             
-            document.querySelector(`input[name="trans-type"][value="${trans.tipo === 'Receita' ? 'income' : 'expense'}"]`).checked = true;
+            const tipoVal = trans.tipo === 'Receita' ? 'income' : 'expense';
+            document.querySelector(`input[name="trans-type"][value="${tipoVal}"]`).checked = true;
+            this.renderCategoryGrid(tipoVal);
             document.querySelector(`input[name="trans-category"][value="${trans.categoria}"]`).checked = true;
             document.querySelector(`input[name="trans-owner"][value="${trans.owner}"]`).checked = true;
 
@@ -618,7 +697,8 @@ class TransactionController {
         const list = document.getElementById('split-items-list');
         if (!list) return;
         
-        const categories = ["Mercado", "Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Pets", "Compras", "Educação", "Viagem", "Presentes", "Investimentos", "Assinaturas", "Outros"];
+        const isIncome = document.querySelector('input[name="trans-type"]:checked')?.value === 'income';
+        const categories = isIncome ? INCOME_CATEGORIES : CATEGORIES;
         
         list.innerHTML = this.splitItems.map(item => `
             <div style="display:flex; gap:6px; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">

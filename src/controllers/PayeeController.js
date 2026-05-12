@@ -21,8 +21,8 @@ export default class PayeeController {
         container.innerHTML = this.payees.map(p => `
             <div class="config-item">
                 <div class="config-info">
-                    <strong>${p.name}</strong>
-                    <span class="subtitle">${p.defaultCategory} ${p.document ? '• ' + p.document : ''}</span>
+                    <strong><i class="fa-solid fa-user"></i> ${p.name}</strong>
+                    <span class="subtitle">Categoria: ${p.defaultCategory}${p.document ? ' • Doc: ' + p.document : ''}</span>
                 </div>
                 <div class="config-actions">
                     <button class="btn-icon small" onclick="window.app.payeeController.delete('${p.id}')">

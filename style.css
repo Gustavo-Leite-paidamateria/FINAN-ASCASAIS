@@ -492,7 +492,23 @@ button { border: none; cursor: pointer; font-family: inherit; transition: var(--
 .progress-fill.her { background: linear-gradient(90deg, #ec4899, #f472b6); }
 
 /* Goals */
-.goals-list { display: flex; flex-direction: column; gap: 12px; }
+.scroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.scroll-list::-webkit-scrollbar { width: 4px; }
+.scroll-list::-webkit-scrollbar-track { background: transparent; }
+.scroll-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+
+.goals-list { display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.goals-list::-webkit-scrollbar { width: 4px; }
+.goals-list::-webkit-scrollbar-track { background: transparent; }
+.goals-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
 .goal-item { 
     background: var(--bg-tertiary); 
     padding: 20px; 
@@ -561,7 +577,10 @@ button { border: none; cursor: pointer; font-family: inherit; transition: var(--
 /* Planning View */
 .tab-content { padding-bottom: 100px; }
 
-.config-list { display: flex; flex-direction: column; gap: 12px; }
+.config-list { display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.config-list::-webkit-scrollbar { width: 4px; }
+.config-list::-webkit-scrollbar-track { background: transparent; }
+.config-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
 .config-item { 
     display: flex; 
     justify-content: space-between; 
@@ -586,7 +605,10 @@ button { border: none; cursor: pointer; font-family: inherit; transition: var(--
 .card-meta { display: block; font-size: 0.8rem; color: var(--text-sec); margin-top: 4px; }
 
 /* Scheduled Bills */
-.scheduled-list { display: flex; flex-direction: column; gap: 12px; }
+.scheduled-list { display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.scheduled-list::-webkit-scrollbar { width: 4px; }
+.scheduled-list::-webkit-scrollbar-track { background: transparent; }
+.scheduled-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
 .scheduled-item {
     display: flex;
     justify-content: space-between;
