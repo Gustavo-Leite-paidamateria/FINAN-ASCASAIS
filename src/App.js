@@ -592,6 +592,26 @@ class App {
                 🏠 ${w.workspaces?.name || 'Meu Espaço'}
             </option>
         `).join('');
+        
+        this.refreshHeader(this.config);
+    }
+
+    refreshHeader(config) {
+        const greetingEl = document.getElementById('user-greeting');
+        const avatarImg = document.getElementById('avatar-img');
+        const avatarIcon = document.getElementById('avatar-icon');
+        
+        if (greetingEl) {
+            const displayName = config?.userData?.displayName || storageService.getUser()?.split('@')[0] || 'Usuário';
+            const firstName = displayName.split(' ')[0];
+            greetingEl.textContent = `Olá, ${firstName}`;
+        }
+
+        if (config?.userData?.avatar && avatarImg && avatarIcon) {
+            avatarImg.src = config.userData.avatar;
+            avatarImg.style.display = 'block';
+            avatarIcon.style.display = 'none';
+        }
     }
 
     openProfileModal() {

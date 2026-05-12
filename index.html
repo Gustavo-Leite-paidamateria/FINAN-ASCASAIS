@@ -9,6 +9,14 @@
     <title>Finanças em Casal</title>
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; border: none; background: transparent; color: var(--text-sec); cursor: pointer; transition: all 0.3s; border-radius: 12px; min-width: 80px; }
+        .nav-item i { font-size: 1.1rem; }
+        .nav-item span { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; opacity: 0.8; letter-spacing: 0.5px; }
+        .nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--accent); }
+        .nav-item.active span { opacity: 1; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+    </style>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js -->
@@ -61,7 +69,7 @@
                     <img id="avatar-img" style="display:none; width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">
                 </div>
                 <div>
-                    <p class="greeting">Olá,</p>
+                    <p class="greeting" id="user-greeting">Olá, Usuário</p>
                     <div style="display: flex; flex-direction: column;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: bold; font-size: 1.1rem; padding: 0; cursor: pointer; appearance: none;">
@@ -92,24 +100,31 @@
             <div class="nav-container">
                 <button class="nav-item active" data-tab="dashboard-view" title="Resumo">
                     <i class="fa-solid fa-house"></i>
+                    <span>Dashboard</span>
                 </button>
                 <button class="nav-item" data-tab="planning-view" title="Planejamento">
                     <i class="fa-solid fa-calendar-check"></i>
+                    <span>Planejar</span>
                 </button>
                 <button class="nav-item" data-tab="debts-view" title="Dívidas">
                     <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>Dívidas</span>
                 </button>
                 <button class="nav-item" data-tab="calendar-view" title="Calendário">
                     <i class="fa-solid fa-calendar-days"></i>
+                    <span>Agenda</span>
                 </button>
                 <button class="nav-item" data-tab="reports-view" title="Relatórios">
                     <i class="fa-solid fa-chart-area"></i>
+                    <span>Relatórios</span>
                 </button>
                 <button class="nav-item" data-tab="simulator-view" title="Simulador">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Simular</span>
                 </button>
                 <button class="nav-item" data-tab="investments-view" title="Investimentos">
                     <i class="fa-solid fa-chart-line"></i>
+                    <span>Investir</span>
                 </button>
             </div>
         </nav>
