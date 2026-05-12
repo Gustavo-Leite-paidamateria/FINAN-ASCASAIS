@@ -174,6 +174,14 @@ class App {
             closeInvModal.addEventListener('click', () => this.investmentsController.closeModal());
         }
 
+        const contributionForm = document.getElementById('contribution-form');
+        if (contributionForm) {
+            contributionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.investmentsController.addContribution(this.config);
+            });
+        }
+
         const saveBudgetsBtn = document.getElementById('save-budgets-btn');
         if (saveBudgetsBtn) {
             saveBudgetsBtn.addEventListener('click', () => this.planningController.saveBudgets(this.config));

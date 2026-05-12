@@ -108,9 +108,14 @@ class InvestmentsController {
                         </div>
                         <div style="font-size:0.65rem;color:var(--text-sec);">Investido: ${formatCurrency(inv.totalInvested)}</div>
                     </div>
-                    <button class="btn-icon small" onclick="window.app.investmentsController.delete('${inv.id}')" style="margin-left:8px;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center; margin-left:8px;">
+                        <button class="btn-icon small" onclick="window.app.investmentsController.openContributionModal('${inv.id}')" title="Novo Aporte (Preço Médio)" style="color:var(--accent);">
+                            <i class="fa-solid fa-circle-plus"></i>
+                        </button>
+                        <button class="btn-icon small" onclick="window.app.investmentsController.delete('${inv.id}')" title="Excluir Ativo">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -148,9 +153,14 @@ class InvestmentsController {
                         </div>
                         <div style="font-size:0.65rem;color:var(--text-sec);">Investido: ${formatCurrency(inv.totalInvested)}</div>
                     </div>
-                    <button class="btn-icon small" onclick="window.app.investmentsController.delete('${inv.id}')" style="margin-left:8px;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center; margin-left:8px;">
+                        <button class="btn-icon small" onclick="window.app.investmentsController.openContributionModal('${inv.id}')" title="Novo Aporte" style="color:var(--accent);">
+                            <i class="fa-solid fa-circle-plus"></i>
+                        </button>
+                        <button class="btn-icon small" onclick="window.app.investmentsController.delete('${inv.id}')" title="Excluir">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -378,6 +388,67 @@ class InvestmentsController {
         } catch (e) {
             console.error('Erro ao excluir investimento:', e);
             notificationService.error('Erro', 'Falha ao excluir investimento.');
+        }
+    }
+
+    openContributionModal(id) {
+        const config = window.app.config;
+        const inv = config.investments.find(i => i.id === id);
+        if (!inv) return;
+
+        document.getElementById('contribution-inv-id').value = id;
+        document.getElementById('contribution-inv-info').textContent = `Ativo: ${inv.ticker || inv.name} | Preço Médio Atual: ${formatCurrency(inv.buyPrice)}`;
+        document.getElementById('contribution-buy-price').value = (inv.currentPrice || inv.buyPrice).toFixed(2);
+        document.getElementById('contribution-total-amount').value = '';
+        document.getElementById('contribution-date').value = new Date().toISOString().split('T')[0];
+
+        document.getElementById('contribution-modal').classList.remove('hidden');
+    }
+
+    async addContribution(config) {
+        const id = document.getElementById('contribution-inv-id').value;
+        const buyPriceRaw = document.getElementById('contribution-buy-price').value;
+        const totalAmountRaw = document.getElementById('contribution-total-amount').value;
+
+        const newBuyPrice = this.parseMoney(buyPriceRaw);
+        const newTotalAmount = this.parseMoney(totalAmountRaw);
+
+        if (!newBuyPrice || !newTotalAmount) {
+            notificationService.error('Erro', 'Por favor, informe valores válidos.');
+            return;
+        }
+
+        const invIndex = config.investments.findIndex(i => i.id === id);
+        if (invIndex === -1) return;
+
+        const inv = config.investments[invIndex];
+        
+        // Novos valores
+        const newQuantity = newTotalAmount / newBuyPrice;
+        
+        // Recalcular Preço Médio
+        const currentTotalInvested = inv.totalInvested || 0;
+        const currentQuantity = inv.quantity || 0;
+        
+        const finalTotalInvested = currentTotalInvested + newTotalAmount;
+        const finalQuantity = currentQuantity + newQuantity;
+        const finalBuyPrice = finalTotalInvested / finalQuantity;
+
+        // Atualizar objeto
+        inv.totalInvested = finalTotalInvested;
+        inv.quantity = finalQuantity;
+        inv.buyPrice = finalBuyPrice;
+        
+        try {
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+            
+            document.getElementById('contribution-modal').classList.add('hidden');
+            notificationService.success('Sucesso', `Aporte registrado em ${inv.ticker || inv.name}! Novo Preço Médio: ${formatCurrency(finalBuyPrice)}`);
+            
+            this.render(config);
+        } catch (e) {
+            notificationService.error('Erro', 'Falha ao salvar aporte.');
         }
     }
 }

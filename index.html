@@ -1666,6 +1666,39 @@
                 <button type="submit" class="btn-primary w-full mt-4">Adicionar Investimento</button>
             </form>
         </div>
+ 
+    <!-- Contribution (Aporte) Modal -->
+    <div id="contribution-modal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 id="contribution-modal-title">📈 Novo Aporte</h3>
+                <button onclick="document.getElementById('contribution-modal').classList.add('hidden')" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="contribution-form">
+                <input type="hidden" id="contribution-inv-id">
+                <p id="contribution-inv-info" style="font-size: 0.9rem; color: var(--text-sec); margin-bottom: 20px;"></p>
+                
+                <div class="input-group">
+                    <label>Preço da Compra (R$)</label>
+                    <input type="text" id="contribution-buy-price" placeholder="R$ 0,00" required>
+                    <small style="font-size: 0.7rem; color: var(--text-sec);">Preço pago por cada cota/unidade neste aporte.</small>
+                </div>
+
+                <div class="input-group">
+                    <label>Valor Total do Aporte (R$)</label>
+                    <input type="text" id="contribution-total-amount" placeholder="R$ 0,00" required>
+                    <small style="font-size: 0.7rem; color: var(--text-sec);">Total de dinheiro investido nesta compra.</small>
+                </div>
+
+                <div class="input-group">
+                    <label>Data do Aporte</label>
+                    <input type="date" id="contribution-date">
+                </div>
+
+                <button type="submit" class="btn-primary w-full mt-4">Confirmar Aporte</button>
+            </form>
+        </div>
+    </div>
     </div>
 
 </body>
