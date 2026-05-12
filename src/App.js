@@ -156,6 +156,19 @@ class App {
         if (prevMonth) prevMonth.addEventListener('click', () => this.dashboardController.navigateMonth(-1));
         if (nextMonth) nextMonth.addEventListener('click', () => this.dashboardController.navigateMonth(1));
 
+        const invForm = document.getElementById('inv-form');
+        if (invForm) {
+            invForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.investmentsController.add(this.config);
+            });
+        }
+
+        const closeInvModal = document.getElementById('close-inv-modal');
+        if (closeInvModal) {
+            closeInvModal.addEventListener('click', () => this.investmentsController.closeModal());
+        }
+
         const saveBudgetsBtn = document.getElementById('save-budgets-btn');
         if (saveBudgetsBtn) {
             saveBudgetsBtn.addEventListener('click', () => this.planningController.saveBudgets(this.config));
