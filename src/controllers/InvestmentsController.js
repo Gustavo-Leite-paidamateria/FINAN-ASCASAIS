@@ -235,10 +235,13 @@ class InvestmentsController {
     }
 
     openAddModal() {
-        document.getElementById('inv-form')?.reset();
-        this.setTypeFields('b3');
+        document.getElementById('inv-form').reset();
         document.getElementById('inv-modal')?.classList.remove('hidden');
         this.initSearchHandlers();
+    }
+
+    closeModal() {
+        document.getElementById('inv-modal')?.classList.add('hidden');
     }
 
     initSearchHandlers() {
