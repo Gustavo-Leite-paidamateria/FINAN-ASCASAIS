@@ -12,10 +12,18 @@ class AuthController {
         } catch (error) {
             console.error("Login failed:", error);
             const errDiv = document.getElementById('login-error');
-            if (errDiv) {
-                errDiv.textContent = "Verifique o e-mail ou a senha.";
+            
+            let msg = "Verifique o e-mail ou a senha.";
+            if (error.message?.includes('rate limit') || error.status === 429) {
+                msg = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+            } else if (error.message?.includes('Invalid login credentials')) {
+                msg = "Credenciais inválidas. Verifique o e-mail e a senha.";
             }
-            notificationService.error('Erro', 'Credenciais inválidas.');
+
+            if (errDiv) {
+                errDiv.textContent = msg;
+            }
+            notificationService.error('Erro', msg);
             return false;
         }
     }
@@ -64,6 +72,39 @@ class AuthController {
 
             const errDiv = document.getElementById('login-error');
             if (errDiv) errDiv.textContent = msg;
+            notificationService.error('Erro', msg);
+            return false;
+        }
+    }
+
+    async resetPassword(email) {
+        try {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                notificationService.error('Erro', 'Preencha um e-mail válido para recuperar a senha.');
+                return false;
+            }
+
+            await supabaseService.resetPassword(email);
+            notificationService.success('Sucesso', 'Um link de recuperação foi enviado para o seu e-mail.');
+            const errDiv = document.getElementById('login-error');
+            if (errDiv) {
+                errDiv.style.color = '#10b981';
+                errDiv.textContent = "Link de recuperação enviado! Verifique seu e-mail.";
+                setTimeout(() => { errDiv.style.color = ''; errDiv.textContent = ''; }, 5000);
+            }
+            return true;
+        } catch (error) {
+            console.error("Reset password failed:", error);
+            let msg = "Erro ao enviar link de recuperação.";
+            if (error.message?.includes('rate limit')) {
+                msg = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+            }
+            const errDiv = document.getElementById('login-error');
+            if (errDiv) {
+                errDiv.style.color = '#f43f5e';
+                errDiv.textContent = msg;
+            }
             notificationService.error('Erro', msg);
             return false;
         }

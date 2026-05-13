@@ -72,24 +72,66 @@ class App {
 
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
+            loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const email = document.getElementById('email')?.value;
                 const password = document.getElementById('password')?.value;
-                if (email && password) this.authController.login(email, password);
+                const loginBtn = document.getElementById('login-btn');
+                if (email && password) {
+                    if (loginBtn) {
+                        loginBtn.disabled = true;
+                        loginBtn.innerHTML = '<span>Aguarde...</span>';
+                    }
+                    await this.authController.login(email, password);
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<span>Entrar</span>';
+                    }
+                }
             });
         }
 
         const registerBtn = document.getElementById('register-btn');
         if (registerBtn) {
-            registerBtn.addEventListener('click', () => {
+            registerBtn.addEventListener('click', async () => {
                 const email = document.getElementById('email')?.value;
                 const password = document.getElementById('password')?.value;
                 if (!email || !password) {
                     notificationService.warning('Aviso', 'Preencha o e-mail e a senha para criar a conta.');
                     return;
                 }
-                this.authController.register(email, password);
+                registerBtn.disabled = true;
+                const originalText = registerBtn.innerHTML;
+                registerBtn.innerHTML = '<span>Aguarde...</span>';
+                
+                await this.authController.register(email, password);
+                
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = originalText;
+            });
+        }
+
+        const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+        if (forgotPasswordBtn) {
+            forgotPasswordBtn.addEventListener('click', async () => {
+                const email = document.getElementById('email')?.value;
+                if (!email) {
+                    notificationService.warning('Aviso', 'Preencha o seu e-mail para recuperar a senha.');
+                    const errDiv = document.getElementById('login-error');
+                    if (errDiv) {
+                        errDiv.style.color = '#f43f5e';
+                        errDiv.textContent = 'Preencha o e-mail primeiro.';
+                    }
+                    return;
+                }
+                forgotPasswordBtn.disabled = true;
+                const originalText = forgotPasswordBtn.innerHTML;
+                forgotPasswordBtn.innerHTML = 'Enviando...';
+                
+                await this.authController.resetPassword(email);
+                
+                forgotPasswordBtn.disabled = false;
+                forgotPasswordBtn.innerHTML = originalText;
             });
         }
 

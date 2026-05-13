@@ -66,6 +66,9 @@
                         <span>Criar Conta</span>
                     </button>
                 </div>
+                <div style="text-align: center; margin-top: 12px;">
+                    <button type="button" id="forgot-password-btn" class="btn-text" style="font-size: 0.8rem; opacity: 0.8; color: var(--text-sec);">Esqueci minha senha</button>
+                </div>
                 <div id="login-error" class="error-text"></div>
             </form>
         </div>
@@ -80,17 +83,21 @@
                     <img id="avatar-img" style="display:none; width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">
                 </div>
                 <div>
-                    <p class="greeting" id="user-greeting">Olá, Usuário</p>
-                    <div style="display: flex; flex-direction: column;">
+                    <h4 id="user-greeting" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: white; letter-spacing: -0.5px;">Olá, Usuário</h4>
+                    <div style="display: flex; flex-direction: column; margin-top: 2px; opacity: 0.85;">
                         <div style="display: flex; align-items: center; gap: 4px;">
-                            <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: bold; font-size: 1.1rem; padding: 0; cursor: pointer; appearance: none;">
-                                <option value="casal">Casal</option>
+                            <span style="font-size: 0.85rem;">👫</span>
+                            <select id="profile-selector" style="background: transparent; border: none; color: white; font-weight: 500; font-size: 0.85rem; padding: 0; cursor: pointer; appearance: none; font-family: inherit;">
+                                <option value="casal">Casal (Todos)</option>
                             </select>
-                            <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: var(--text-sec);"></i>
+                            <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; color: var(--text-sec); opacity: 0.7;"></i>
                         </div>
-                        <select id="workspace-selector" style="background: transparent; border: none; color: var(--text-sec); font-size: 0.7rem; padding: 0; cursor: pointer; appearance: none; width: fit-content; font-family: inherit;">
-                            <option value="">Carregando Espaço...</option>
-                        </select>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.7rem;">🏠</span>
+                            <select id="workspace-selector" style="background: transparent; border: none; color: var(--text-sec); font-size: 0.7rem; padding: 0; cursor: pointer; appearance: none; width: fit-content; font-family: inherit;">
+                                <option value="">Carregando Espaço...</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>

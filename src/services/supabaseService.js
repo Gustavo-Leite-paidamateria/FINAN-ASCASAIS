@@ -42,6 +42,14 @@ class SupabaseService {
         return data;
     }
 
+    async resetPassword(email) {
+        this.init();
+        const { error } = await this.client.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + window.location.pathname
+        });
+        if (error) throw error;
+    }
+
     async logoutUser() {
         this.init();
         const { error } = await this.client.auth.signOut();
