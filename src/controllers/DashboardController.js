@@ -169,7 +169,14 @@ class DashboardController {
                 else netTransactions -= amt;
             });
 
-            return totalWalletInitial + netTransactions;
+            let totalInvestments = 0;
+            if (config.investments && config.investments.length > 0) {
+                config.investments.forEach(inv => {
+                    totalInvestments += (typeof inv.getCurrentValue === 'function') ? inv.getCurrentValue() : (inv.totalInvested || 0);
+                });
+            }
+
+            return totalWalletInitial + netTransactions + totalInvestments;
         } catch (e) {
             console.error('Erro ao calcular saldo global:', e);
             return 0;
@@ -274,6 +281,13 @@ class DashboardController {
             if (!totals[type]) totals[type] = 0;
             const balance = await this.calculateWalletBalance(wallet.id, wallet.initialBalance);
             totals[type] += balance;
+        }
+
+        if (config.investments && config.investments.length > 0) {
+            if (!totals['investimento']) totals['investimento'] = 0;
+            config.investments.forEach(inv => {
+                totals['investimento'] += (typeof inv.getCurrentValue === 'function') ? inv.getCurrentValue() : (inv.totalInvested || 0);
+            });
         }
 
         const types = {

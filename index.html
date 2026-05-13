@@ -1676,6 +1676,14 @@
                     </div>
                 </div>
 
+                <div class="input-group">
+                    <label>Conta/Carteira de Saída (Opcional)</label>
+                    <select id="inv-wallet-select" style="background:rgba(15,23,42,0.6);color:white;padding:12px;border-radius:8px;border:1px solid var(--glass-border);width:100%;">
+                        <option value="">-- Não registrar saída de caixa --</option>
+                    </select>
+                    <small style="font-size: 0.7rem; color: var(--text-sec);">Se selecionado, criará uma transferência reduzindo o saldo da conta.</small>
+                </div>
+
                 <button type="submit" class="btn-primary w-full mt-4">Adicionar Investimento</button>
             </form>
         </div>
@@ -1711,6 +1719,13 @@
                 <div class="input-group">
                     <label>Data do Aporte</label>
                     <input type="date" id="contribution-date">
+                </div>
+
+                <div class="input-group">
+                    <label>Conta/Carteira de Saída (Opcional)</label>
+                    <select id="contribution-wallet-select" style="background:rgba(15,23,42,0.6);color:white;padding:12px;border-radius:8px;border:1px solid var(--glass-border);width:100%;">
+                        <option value="">-- Não registrar saída de caixa --</option>
+                    </select>
                 </div>
 
                 <button type="submit" class="btn-primary w-full mt-4">Confirmar Aporte</button>

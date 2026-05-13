@@ -236,6 +236,13 @@ class InvestmentsController {
 
     openAddModal() {
         document.getElementById('inv-form').reset();
+        
+        const walletSelect = document.getElementById('inv-wallet-select');
+        if (walletSelect && window.app?.config?.wallets) {
+            walletSelect.innerHTML = '<option value="">-- Não registrar saída de caixa --</option>' + 
+                window.app.config.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        }
+
         document.getElementById('inv-modal')?.classList.remove('hidden');
         this.initSearchHandlers();
     }
@@ -290,6 +297,12 @@ class InvestmentsController {
         else if (type === 'custom' && customFields) customFields.classList.remove('hidden');
     }
 
+    parseMoney(val) {
+        if (!val) return 0;
+        const cleaned = val.toString().replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+        return parseFloat(cleaned) || 0;
+    }
+
     async add(config) {
         try {
             const type = document.getElementById('inv-type-select')?.value;
@@ -314,19 +327,9 @@ class InvestmentsController {
                 ticker = type === 'b3'
                     ? document.getElementById('inv-b3-ticker')?.value?.trim().toUpperCase()
                     : document.getElementById('inv-crypto-id')?.value?.trim().toLowerCase();
-                const parseMoney = (val) => {
-                    if (!val) return 0;
-                    // Remove currency symbols, spaces and thousands separators (dots)
-                    // Then replace comma with dot for decimals
-                    const cleaned = val.toString()
-                        .replace(/[R$\s]/g, '')
-                        .replace(/\./g, '')
-                        .replace(',', '.');
-                    return parseFloat(cleaned) || 0;
-                };
 
-                buyPrice = parseMoney(document.getElementById('inv-buy-price')?.value);
-                totalInvested = parseMoney(document.getElementById('inv-total-invested')?.value);
+                buyPrice = this.parseMoney(document.getElementById('inv-buy-price')?.value);
+                totalInvested = this.parseMoney(document.getElementById('inv-total-invested')?.value);
                 purchaseDate = document.getElementById('inv-date')?.value || purchaseDate;
 
                 if (!ticker) {
@@ -339,14 +342,8 @@ class InvestmentsController {
                 }
                 quantity = totalInvested / buyPrice;
             } else {
-                const parseMoney = (val) => {
-                    if (!val) return 0;
-                    const cleaned = val.toString().replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
-                    return parseFloat(cleaned) || 0;
-                };
-
-                totalInvested = parseMoney(document.getElementById('inv-custom-amount')?.value);
-                monthlyReturn = parseMoney(document.getElementById('inv-monthly-return')?.value);
+                totalInvested = this.parseMoney(document.getElementById('inv-custom-amount')?.value);
+                monthlyReturn = this.parseMoney(document.getElementById('inv-monthly-return')?.value);
                 startDate = document.getElementById('inv-start-date')?.value || new Date().toISOString().split('T')[0];
                 durationMonths = parseInt(document.getElementById('inv-duration')?.value) || 0;
 
@@ -365,8 +362,33 @@ class InvestmentsController {
             storageService.saveConfig(config);
             await supabaseService.saveConfig(config);
 
+            const walletId = document.getElementById('inv-wallet-select')?.value;
+            if (walletId) {
+                const transferTransaction = {
+                    tipo: 'Despesa',
+                    valor: totalInvested,
+                    descricao: `Investimento: ${name || ticker}`,
+                    categoria: 'Outros',
+                    data: purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString(),
+                    forma_pagamento: 'pix',
+                    status: 'Pago',
+                    observacoes: JSON.stringify({ owner: 'ambos', conta_id: walletId, is_transfer: true }),
+                    referencia: 'transferencia'
+                };
+                try {
+                    await supabaseService.insertTransaction([transferTransaction]);
+                } catch (e) {
+                    console.error('Erro ao registrar saída da conta:', e);
+                }
+            }
+
             document.getElementById('inv-modal')?.classList.add('hidden');
             this.render(config);
+            
+            // Tentar atualizar o dashboard também, já que a transação alterou saldo
+            if (window.app?.dashboardController) {
+                window.app.dashboardController.loadData();
+            }
             notificationService.success('Sucesso', 'Investimento adicionado!');
 
             // Fetch price immediately for B3/crypto
@@ -404,6 +426,12 @@ class InvestmentsController {
         document.getElementById('contribution-buy-price').value = (inv.currentPrice || inv.buyPrice).toFixed(2);
         document.getElementById('contribution-total-amount').value = '';
         document.getElementById('contribution-date').value = new Date().toISOString().split('T')[0];
+
+        const walletSelect = document.getElementById('contribution-wallet-select');
+        if (walletSelect && window.app?.config?.wallets) {
+            walletSelect.innerHTML = '<option value="">-- Não registrar saída de caixa --</option>' + 
+                window.app.config.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        }
 
         document.getElementById('contribution-modal').classList.remove('hidden');
     }
@@ -444,10 +472,35 @@ class InvestmentsController {
             storageService.saveConfig(config);
             await supabaseService.saveConfig(config);
             
+            const walletId = document.getElementById('contribution-wallet-select')?.value;
+            if (walletId) {
+                const dateRaw = document.getElementById('contribution-date')?.value;
+                const dateIso = dateRaw ? new Date(dateRaw).toISOString() : new Date().toISOString();
+                const transferTransaction = {
+                    tipo: 'Despesa',
+                    valor: newTotalAmount,
+                    descricao: `Aporte em ${inv.ticker || inv.name}`,
+                    categoria: 'Outros',
+                    data: dateIso,
+                    forma_pagamento: 'pix',
+                    status: 'Pago',
+                    observacoes: JSON.stringify({ owner: 'ambos', conta_id: walletId, is_transfer: true }),
+                    referencia: 'transferencia'
+                };
+                try {
+                    await supabaseService.insertTransaction([transferTransaction]);
+                } catch (e) {
+                    console.error('Erro ao registrar saída da conta:', e);
+                }
+            }
+            
             document.getElementById('contribution-modal').classList.add('hidden');
             notificationService.success('Sucesso', `Aporte registrado em ${inv.ticker || inv.name}! Novo Preço Médio: ${formatCurrency(finalBuyPrice)}`);
             
             this.render(config);
+            if (window.app?.dashboardController) {
+                window.app.dashboardController.loadData();
+            }
         } catch (e) {
             notificationService.error('Erro', 'Falha ao salvar aporte.');
         }
