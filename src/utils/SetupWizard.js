@@ -95,6 +95,24 @@ export class SetupWizard {
             });
             config.goals.push(goal);
             created.goals++;
+
+            // Create automatic investment if it's a reserve goal
+            const normName = data.goalName.toLowerCase();
+            if (normName.includes('reserva') || normName.includes('emergencia') || normName.includes('emergência')) {
+                const { Investment } = await import('../models/index.js');
+                const inv = new Investment({
+                    name: data.goalName,
+                    ticker: 'RESERVA',
+                    type: 'custom',
+                    category: 'Reserva de Emergência',
+                    totalInvested: data.goalCurrent || 0,
+                    quantity: 1,
+                    currentPrice: data.goalCurrent || 0,
+                    purchaseDate: new Date().toISOString().split('T')[0]
+                });
+                config.investments.push(inv);
+                created.investments = (created.investments || 0) + 1;
+            }
         }
 
         const suggestedBudgets = this.suggestBudgets(data);

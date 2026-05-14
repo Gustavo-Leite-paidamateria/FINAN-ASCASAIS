@@ -526,6 +526,7 @@ export class UserConfig {
         this.investments = [];
         this.profileBudgets = {};
         this.selectedMentor = 'PASTOR_TRADICIONAL';
+        this.customCategories = [];
     }
 
     static fromJSON(json) {
@@ -545,6 +546,7 @@ export class UserConfig {
         config.workspace_id = json.workspace_id || null;
         config.simulations = (json.simulations || []).map(s => new SimulationEvent(s));
         config.investments = (json.investments || []).map(i => new Investment(i));
+        config.customCategories = json.customCategories || [];
         
         config.profileBudgets = {};
         if (json.profileBudgets) {
@@ -573,6 +575,7 @@ export class UserConfig {
             workspace_id: this.workspace_id,
             simulations: this.simulations,
             investments: this.investments,
+            customCategories: this.customCategories,
             profileBudgets: this.profileBudgets,
             selectedMentor: this.selectedMentor
         };

@@ -53,16 +53,21 @@ class SetupController {
 
     validateStep() {
         const step = STEPS[this.currentStep];
-        if (step === 'income') {
-            if (!this.wizardData.yourIncome || this.wizardData.yourIncome <= 0) {
-                notificationService.warning('Aviso', 'Informe sua renda mensal.');
-                return false;
-            }
-            if (this.wizardData.mode === 'shared' && (!this.wizardData.partnerName)) {
-                notificationService.warning('Aviso', 'Informe o nome da pessoa com quem divide as contas.');
+        
+        if (step === 'mode') {
+            if (this.wizardData.mode === 'shared' && !this.wizardData.partnerName?.trim()) {
+                notificationService.warning('Aviso', 'Informe o nome da pessoa com quem você divide as contas.');
                 return false;
             }
         }
+
+        if (step === 'income') {
+            if (!this.wizardData.yourIncome || this.wizardData.yourIncome <= 0) {
+                notificationService.warning('Aviso', 'Informe sua renda mensal para podermos sugerir orçamentos.');
+                return false;
+            }
+        }
+        
         return true;
     }
 
@@ -130,7 +135,8 @@ class SetupController {
                 `${created.transactions} receita(s)`,
                 `${created.bills} conta(s) fixa(s)`,
                 `${created.debts} dívida(s)`,
-                `${created.goals} meta(s)`
+                `${created.goals} meta(s)`,
+                `${created.investments || 0} investimento(s)`
             ].filter(s => !s.startsWith('0')).join(', ');
 
             notificationService.success('Setup Concluído!', `${msg} criadas com sucesso.`);

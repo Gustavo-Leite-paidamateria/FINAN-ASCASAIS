@@ -38,6 +38,20 @@ class App {
         window.app = this;
 
         await this.authController.checkAuth();
+
+        if (window.supabase) {
+            window.supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'PASSWORD_RECOVERY') {
+                    this.authController.showApp();
+                    this.openProfileModal();
+                    setTimeout(() => {
+                        const tabSecurity = document.getElementById('profile-tab-security');
+                        if (tabSecurity) tabSecurity.click();
+                        notificationService.info('Recuperação', 'Digite sua nova senha abaixo.');
+                    }, 100);
+                }
+            });
+        }
     }
 
     initTheme() {
@@ -70,44 +84,73 @@ class App {
         if (themeDarkBtn) themeDarkBtn.addEventListener('click', () => this.setTheme('dark'));
         if (themeLightBtn) themeLightBtn.addEventListener('click', () => this.setTheme('light'));
 
+        let currentAuthMode = 'login';
+        
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const forgotPasswordContainer = document.getElementById('forgot-password-container');
+        const termsLinkContainer = document.getElementById('terms-link-container');
+
+        if (tabLogin && tabRegister) {
+            tabLogin.addEventListener('click', () => {
+                currentAuthMode = 'login';
+                tabLogin.classList.add('active');
+                tabLogin.style.color = 'var(--accent)';
+                tabLogin.style.borderBottomColor = 'var(--accent)';
+                
+                tabRegister.classList.remove('active');
+                tabRegister.style.color = 'var(--text-sec)';
+                tabRegister.style.borderBottomColor = 'transparent';
+                
+                authSubmitBtn.textContent = 'Entrar';
+                if (forgotPasswordContainer) forgotPasswordContainer.style.display = 'block';
+                if (termsLinkContainer) termsLinkContainer.style.display = 'none';
+            });
+
+            tabRegister.addEventListener('click', () => {
+                currentAuthMode = 'register';
+                tabRegister.classList.add('active');
+                tabRegister.style.color = 'var(--accent)';
+                tabRegister.style.borderBottomColor = 'var(--accent)';
+                
+                tabLogin.classList.remove('active');
+                tabLogin.style.color = 'var(--text-sec)';
+                tabLogin.style.borderBottomColor = 'transparent';
+                
+                authSubmitBtn.textContent = 'Criar Conta';
+                if (forgotPasswordContainer) forgotPasswordContainer.style.display = 'none';
+                if (termsLinkContainer) termsLinkContainer.style.display = 'block';
+            });
+        }
+
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const email = document.getElementById('email')?.value;
                 const password = document.getElementById('password')?.value;
-                const loginBtn = document.getElementById('login-btn');
-                if (email && password) {
-                    if (loginBtn) {
-                        loginBtn.disabled = true;
-                        loginBtn.innerHTML = '<span>Aguarde...</span>';
-                    }
-                    await this.authController.login(email, password);
-                    if (loginBtn) {
-                        loginBtn.disabled = false;
-                        loginBtn.innerHTML = '<span>Entrar</span>';
-                    }
-                }
-            });
-        }
-
-        const registerBtn = document.getElementById('register-btn');
-        if (registerBtn) {
-            registerBtn.addEventListener('click', async () => {
-                const email = document.getElementById('email')?.value;
-                const password = document.getElementById('password')?.value;
+                
                 if (!email || !password) {
-                    notificationService.warning('Aviso', 'Preencha o e-mail e a senha para criar a conta.');
+                    notificationService.warning('Aviso', 'Preencha o e-mail e a senha.');
                     return;
                 }
-                registerBtn.disabled = true;
-                const originalText = registerBtn.innerHTML;
-                registerBtn.innerHTML = '<span>Aguarde...</span>';
-                
-                await this.authController.register(email, password);
-                
-                registerBtn.disabled = false;
-                registerBtn.innerHTML = originalText;
+
+                if (authSubmitBtn) {
+                    authSubmitBtn.disabled = true;
+                    authSubmitBtn.textContent = 'Aguarde...';
+                }
+
+                if (currentAuthMode === 'login') {
+                    await this.authController.login(email, password);
+                } else {
+                    await this.authController.register(email, password);
+                }
+
+                if (authSubmitBtn) {
+                    authSubmitBtn.disabled = false;
+                    authSubmitBtn.textContent = currentAuthMode === 'login' ? 'Entrar' : 'Criar Conta';
+                }
             });
         }
 
@@ -411,6 +454,13 @@ class App {
             });
         }
 
+        const addCustomCategoryBtn = document.getElementById('add-custom-category-btn');
+        if (addCustomCategoryBtn) {
+            addCustomCategoryBtn.addEventListener('click', () => {
+                this.planningController.addCustomCategory(this.config);
+            });
+        }
+
         const viewAllBtn = document.getElementById('view-all-btn');
         if (viewAllBtn) {
             viewAllBtn.addEventListener('click', () => 
@@ -543,16 +593,21 @@ class App {
             if (this.dashboardController.transactions.length === 0) {
                 this.dashboardController.loadData(this.config).then(() => {
                     this.planningController.render(this.config, this.dashboardController.transactions);
+                    this.debtController.render(this.config);
                 });
             } else {
                 this.planningController.render(this.config, this.dashboardController.transactions);
+                this.debtController.render(this.config);
             }
+        }
+        if (tabId === 'registrations-view') {
+            // Need to render wallets, cards, payees, custom categories, and family members
+            this.planningController.renderRegistrations(this.config);
+            this.payeeController.renderList(this.config);
+            this.familyController.renderMembersList(this.config);
         }
         if (tabId === 'dashboard-view') {
             this.dashboardController.loadData(this.config);
-        }
-        if (tabId === 'debts-view') {
-            this.debtController.render(this.config);
         }
         if (tabId === 'reports-view') {
             this.reportsController.init();
@@ -586,6 +641,26 @@ class App {
         if (closeProfileModal) {
             closeProfileModal.addEventListener('click', () =>
                 document.getElementById('profile-modal')?.classList.add('hidden'));
+        }
+
+        const tabPersonal = document.getElementById('profile-tab-personal');
+        const tabSecurity = document.getElementById('profile-tab-security');
+        const secPersonal = document.getElementById('profile-personal-section');
+        const secSecurity = document.getElementById('profile-security-section');
+
+        if (tabPersonal && tabSecurity) {
+            tabPersonal.addEventListener('click', () => {
+                tabPersonal.classList.add('active');
+                tabSecurity.classList.remove('active');
+                if (secPersonal) secPersonal.style.display = 'block';
+                if (secSecurity) secSecurity.style.display = 'none';
+            });
+            tabSecurity.addEventListener('click', () => {
+                tabSecurity.classList.add('active');
+                tabPersonal.classList.remove('active');
+                if (secPersonal) secPersonal.style.display = 'none';
+                if (secSecurity) secSecurity.style.display = 'block';
+            });
         }
 
         const profileAvatarPreview = document.getElementById('profile-avatar-preview');

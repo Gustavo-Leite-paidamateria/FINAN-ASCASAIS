@@ -49,6 +49,11 @@
                 <h2>Finança<span class="gradient-text">Casal</span></h2>
             </div>
             <p class="subtitle">Acesse para gerenciar os gastos</p>
+            <div class="auth-tabs" style="display: flex; border-bottom: 1px solid var(--glass-border); margin-bottom: 20px;">
+                <button type="button" id="tab-login" class="auth-tab active" style="flex: 1; padding: 10px; background: transparent; border: none; color: var(--accent); border-bottom: 2px solid var(--accent); cursor: pointer; font-weight: 600;">Entrar</button>
+                <button type="button" id="tab-register" class="auth-tab" style="flex: 1; padding: 10px; background: transparent; border: none; color: var(--text-sec); border-bottom: 2px solid transparent; cursor: pointer; font-weight: 600;">Criar Conta</button>
+            </div>
+
             <form id="login-form">
                 <div class="input-group">
                     <label for="email">E-mail</label>
@@ -58,18 +63,18 @@
                     <label for="password">Senha</label>
                     <input type="password" id="password" required placeholder="Sua senha">
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn-primary" id="login-btn" style="flex: 1;">
-                        <span>Entrar</span>
-                    </button>
-                    <button type="button" class="btn-secondary" id="register-btn" style="flex: 1; text-align: center;">
-                        <span>Criar Conta</span>
-                    </button>
-                </div>
-                <div style="text-align: center; margin-top: 12px;">
+                
+                <button type="submit" class="btn-primary w-full" id="auth-submit-btn">Entrar</button>
+                
+                <div style="text-align: center; margin-top: 12px;" id="forgot-password-container">
                     <button type="button" id="forgot-password-btn" class="btn-text" style="font-size: 0.8rem; opacity: 0.8; color: var(--text-sec);">Esqueci minha senha</button>
                 </div>
-                <div id="login-error" class="error-text"></div>
+
+                <div style="text-align: center; margin-top: 12px; display: none;" id="terms-link-container">
+                    <small style="color: var(--text-sec);">Ao criar uma conta, você concorda com nossos <br><a href="#" id="terms-link" onclick="document.getElementById('terms-modal').classList.remove('hidden')" style="color: var(--accent);">Termos de Uso e Privacidade</a></small>
+                </div>
+
+                <div id="login-error" class="error-text" style="margin-top: 10px; color: var(--expense); text-align: center; font-size: 0.85rem;"></div>
             </form>
         </div>
     </div>
@@ -124,9 +129,9 @@
                     <i class="fa-solid fa-calendar-check"></i>
                     <span>Planejar</span>
                 </button>
-                <button class="nav-item" data-tab="debts-view" title="Dívidas">
-                    <i class="fa-solid fa-hand-holding-dollar"></i>
-                    <span>Dívidas</span>
+                <button class="nav-item" data-tab="registrations-view" title="Cadastros">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Cadastros</span>
                 </button>
                 <button class="nav-item" data-tab="calendar-view" title="Calendário">
                     <i class="fa-solid fa-calendar-days"></i>
@@ -389,22 +394,8 @@
                     <div class="section-header" style="margin-bottom: 12px;">
                         <div style="display: flex; gap: 8px;">
                             <button onclick="window.app.importController.openModal(window.app.config)" class="btn-text" style="color: var(--accent);">📥 Importar Extrato</button>
-                            <button id="add-wallet-btn" class="btn-text">+ Nova Conta</button>
+                            <button onclick="window.app.router.navigate('registrations-view')" class="btn-text">Ver Contas e Cartões</button>
                         </div>
-                    </div>
-                    <div id="wallets-config-list" class="config-list">
-                        <div class="empty-state">Nenhuma conta cadastrada.</div>
-                    </div>
-                </div>
-
-                <div class="glass-card mt-4">
-                    <div class="section-header" style="margin-bottom: 12px;">
-                        <h3>💳 Gerenciar Cartões</h3>
-                        <button id="add-card-btn" class="btn-text">+ Novo Cartão</button>
-                    </div>
-                    <div id="cards-config-list" class="config-list">
-                        <!-- Card list via JS -->
-                        <div class="empty-state">Nenhum cartão cadastrado.</div>
                     </div>
                 </div>
 
@@ -441,6 +432,72 @@
                     </div>
                 </div>
 
+                <!-- Debts -->
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>💸 Gerenciar Dívidas</h3>
+                        <button id="add-debt-btn" class="btn-text">+ Nova Dívida</button>
+                    </div>
+                    
+                    <!-- Debt Summary Card -->
+                    <div class="highlight-card debt-summary-card entrance-anim" style="margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm);">
+                        <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 6px;">📊 Visão Geral das Dívidas</p>
+                        <div id="debts-insight-container" style="margin-bottom: 12px;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                            <div>
+                                <p style="font-size: 0.75rem; color: var(--text-sec);">Total em aberto</p>
+                                <h2 id="total-debt-remaining" style="font-size: 1.5rem; color: #f43f5e;">R$ 0,00</h2>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="font-size: 0.75rem; color: var(--text-sec);">Parcela mensal total</p>
+                                <h3 id="total-debt-monthly" style="font-size: 1.1rem; color: #f59e0b;">R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="debt-progress-bar" style="margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-sec); margin-bottom: 4px;">
+                                <span>Pago</span>
+                                <span id="debt-pct-label">0%</span>
+                            </div>
+                            <div style="height: 6px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden;">
+                                <div id="debt-progress-fill" style="height: 100%; background: linear-gradient(90deg, #10b981, #34d399); width: 0%; border-radius: 4px; transition: width 1s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Debt List -->
+                    <div id="debts-list" class="debts-list">
+                        <div class="empty-state" style="padding: 20px;">Nenhuma dívida cadastrada.</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Registrations View (Cadastros) -->
+            <div id="registrations-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
+                <div class="section-header">
+                    <h2>⚙️ Central de Cadastros</h2>
+                </div>
+                
+                <div class="glass-card mt-4 highlight-card">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>🏦 Contas (Carteiras)</h3>
+                        <button id="add-wallet-btn" class="btn-text">+ Nova Conta</button>
+                    </div>
+                    <div id="wallets-config-list" class="config-list">
+                        <div class="empty-state">Nenhuma conta cadastrada.</div>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>💳 Cartões de Crédito</h3>
+                        <button id="add-card-btn" class="btn-text">+ Novo Cartão</button>
+                    </div>
+                    <div id="cards-config-list" class="config-list">
+                        <div class="empty-state">Nenhum cartão cadastrado.</div>
+                    </div>
+                </div>
+
                 <div class="glass-card mt-4">
                     <div class="section-header" style="margin-bottom: 12px;">
                         <h3>👥 Favorecidos</h3>
@@ -448,6 +505,17 @@
                     </div>
                     <div id="favorecidos-list" class="scroll-list">
                         <div class="empty-state">Nenhum favorecido cadastrado.</div>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-4">
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h3>🏷️ Categorias Personalizadas</h3>
+                        <button id="add-custom-category-btn" class="btn-text">+ Nova Categoria</button>
+                    </div>
+                    <p class="subtitle" style="text-align: left; font-size: 0.8rem;">Crie suas próprias categorias de Receita e Despesa.</p>
+                    <div id="custom-categories-list" class="config-list mt-2">
+                        <div class="empty-state">Nenhuma categoria personalizada.</div>
                     </div>
                 </div>
 
@@ -463,43 +531,7 @@
                 </div>
             </div>
 
-            <!-- Debts View (Tab 3) -->
-            <div id="debts-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
-                <div class="section-header" style="margin-bottom: 20px;">
-                    <h2>💸 Gerenciar Dívidas</h2>
-                    <button id="add-debt-btn" class="btn-icon" title="Adicionar Dívida"><i class="fa-solid fa-circle-plus"></i></button>
-                </div>
 
-                <!-- Debt Summary Card -->
-                <div class="glass-card highlight-card debt-summary-card entrance-anim" style="margin-bottom: 24px;">
-                    <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 6px;">📊 Visão Geral das Dívidas</p>
-                    <div id="debts-insight-container" style="margin-bottom: 12px; margin-top: 12px;"></div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div>
-                            <p style="font-size: 0.75rem; color: var(--text-sec);">Total em aberto</p>
-                            <h2 id="total-debt-remaining" style="font-size: 1.8rem; color: #f43f5e;">R$ 0,00</h2>
-                        </div>
-                        <div style="text-align: right;">
-                            <p style="font-size: 0.75rem; color: var(--text-sec);">Parcela mensal total</p>
-                            <h3 id="total-debt-monthly" style="font-size: 1.2rem; color: #f59e0b;">R$ 0,00</h3>
-                        </div>
-                    </div>
-                    <div class="debt-progress-bar" style="margin-top: 16px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-sec); margin-bottom: 6px;">
-                            <span>Pago</span>
-                            <span id="debt-pct-label">0%</span>
-                        </div>
-                        <div style="height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden;">
-                            <div id="debt-progress-fill" style="height: 100%; background: linear-gradient(90deg, #10b981, #34d399); width: 0%; border-radius: 4px; transition: width 1s ease;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Debt List -->
-                <div id="debts-list" class="debts-list">
-                    <div class="empty-state" style="padding: 40px;">Nenhuma dívida cadastrada. <br>Toque em <b>+</b> para adicionar.</div>
-                </div>
-            </div>
 
             <!-- Reports View (Tab 4) -->
             <div id="reports-view" class="tab-content hidden transition-fade" style="padding-bottom: 100px;">
@@ -1316,45 +1348,55 @@
                 <h3>👤 Meu Perfil</h3>
                 <button id="close-profile-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div id="profile-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; color: white; margin: 0 auto 12px; overflow: hidden; cursor: pointer;" title="Clique para trocar foto">
-                    <i class="fa-solid fa-user" id="profile-avatar-icon"></i>
-                    <img id="profile-avatar-img-preview" style="display:none; width:100%; height:100%; object-fit:cover;" alt="Avatar">
-                </div>
-                <div>
-                    <label for="profile-avatar-file" style="cursor: pointer; font-size: 0.8rem; color: var(--accent);">
-                        <i class="fa-solid fa-camera"></i> Trocar foto
-                    </label>
-                    <input type="file" id="profile-avatar-file" accept="image/*" style="display:none;">
-                </div>
+            <div class="tabs-mini" style="display: flex; gap: 8px; margin-bottom: 20px;">
+                <button type="button" id="profile-tab-personal" class="btn-text active">Dados Pessoais</button>
+                <button type="button" id="profile-tab-security" class="btn-text">Segurança</button>
             </div>
+
             <form id="profile-form">
-                <div class="input-group">
-                    <label>Nome de Exibição</label>
-                    <input type="text" id="profile-display-name" placeholder="Como você quer ser chamado?">
+                <div id="profile-personal-section">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div id="profile-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; color: white; margin: 0 auto 12px; overflow: hidden; cursor: pointer;" title="Clique para trocar foto">
+                            <i class="fa-solid fa-user" id="profile-avatar-icon"></i>
+                            <img id="profile-avatar-img-preview" style="display:none; width:100%; height:100%; object-fit:cover;" alt="Avatar">
+                        </div>
+                        <div>
+                            <label for="profile-avatar-file" style="cursor: pointer; font-size: 0.8rem; color: var(--accent);">
+                                <i class="fa-solid fa-camera"></i> Trocar foto
+                            </label>
+                            <input type="file" id="profile-avatar-file" accept="image/*" style="display:none;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Nome de Exibição</label>
+                        <input type="text" id="profile-display-name" placeholder="Como você quer ser chamado?">
+                    </div>
+                    <div class="input-group">
+                        <label>E-mail</label>
+                        <input type="email" id="profile-email" readonly style="opacity: 0.6; cursor: not-allowed;">
+                    </div>
+                    <div class="input-group">
+                        <label>Personalidade do Mentor</label>
+                        <select id="profile-mentor-select">
+                            <!-- Options via JS -->
+                        </select>
+                        <small>Escolha quem vai te dar os insights financeiros.</small>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label>E-mail</label>
-                    <input type="email" id="profile-email" readonly style="opacity: 0.6; cursor: not-allowed;">
+                
+                <div id="profile-security-section" style="display: none;">
+                    <p style="font-size: 0.85rem; color: var(--text-sec); margin-bottom: 12px;">Trocar senha (deixe em branco para manter)</p>
+                    <div class="input-group">
+                        <label>Nova Senha</label>
+                        <input type="password" id="profile-new-password" placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="input-group">
+                        <label>Confirmar Senha</label>
+                        <input type="password" id="profile-confirm-password" placeholder="Repita a nova senha">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label>Personalidade do Mentor</label>
-                    <select id="profile-mentor-select">
-                        <!-- Options via JS -->
-                    </select>
-                    <small>Escolha quem vai te dar os insights financeiros.</small>
-                </div>
-                <hr style="border-color: var(--glass-border); margin: 16px 0;">
-                <p style="font-size: 0.85rem; color: var(--text-sec); margin-bottom: 12px;">Trocar senha (deixe em branco para manter)</p>
-                <div class="input-group">
-                    <label>Nova Senha</label>
-                    <input type="password" id="profile-new-password" placeholder="Mínimo 6 caracteres">
-                </div>
-                <div class="input-group">
-                    <label>Confirmar Senha</label>
-                    <input type="password" id="profile-confirm-password" placeholder="Repita a nova senha">
-                </div>
-                <button type="submit" class="btn-primary w-full mt-4">Salvar Perfil</button>
+                
+                <button type="submit" class="btn-primary w-full mt-4">Salvar Alterações</button>
             </form>
         </div>
     </div>
@@ -1413,6 +1455,27 @@
                 <h4>📥 Importação</h4>
                 <p>Na aba <b>Planejamento</b>, clique em Importar Extrato. Arraste arquivos <b>.OFX</b> do seu banco para importar transações em massa após revisão rápida.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Terms of Use Modal -->
+    <div id="terms-modal" class="modal-overlay hidden" style="z-index: 3000;">
+        <div class="modal-content glass-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>📜 Termos de Uso e Privacidade</h3>
+                <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="max-height: 60vh; overflow-y: auto; padding-right: 10px; font-size: 0.9rem; color: var(--text-sec); line-height: 1.5;">
+                <h4>1. Privacidade e Proteção de Dados (LGPD)</h4>
+                <p>Nós levamos sua privacidade a sério. Seus dados financeiros e pessoais são armazenados de forma segura e utilizados estritamente para o funcionamento do aplicativo. Não compartilhamos, vendemos ou expomos suas informações para terceiros.</p>
+                <br>
+                <h4>2. Segurança</h4>
+                <p>Utilizamos autenticação segura via Supabase. Suas senhas são criptografadas e não temos acesso a elas.</p>
+                <br>
+                <h4>3. Uso do Aplicativo</h4>
+                <p>O aplicativo é fornecido "como está". Os relatórios e simulações têm caráter informativo e não constituem recomendação financeira profissional.</p>
+            </div>
+            <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="btn-primary w-full mt-4">Entendi e Concordo</button>
         </div>
     </div>
 

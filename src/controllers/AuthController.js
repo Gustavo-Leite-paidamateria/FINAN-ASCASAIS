@@ -50,7 +50,10 @@ class AuthController {
             const authData = await supabaseService.registerUser(email, password);
 
             if(authData.user && authData.user.identities && authData.user.identities.length === 0) {
-                 notificationService.error('Erro', 'Este e-mail já está em uso.');
+                 const msg = 'Este e-mail já está em uso.';
+                 const errDiv = document.getElementById('login-error');
+                 if (errDiv) errDiv.textContent = msg;
+                 notificationService.error('Erro', msg);
                  return false;
             }
             // Supabase auto-logs in on signup by default if email confirmation is disabled

@@ -100,16 +100,34 @@ class TransactionController {
         const grid = document.getElementById('category-grid');
         if (!grid) return;
 
+        const config = window.app?.config;
         const isIncome = tipo === 'income' || document.querySelector('input[name="trans-type"]:checked')?.value === 'income';
-        const categories = isIncome ? INCOME_CATEGORIES : CATEGORIES;
-        const icons = isIncome ? INCOME_CATEGORY_ICONS : CATEGORY_ICONS;
+        
+        let categories = isIncome ? [...INCOME_CATEGORIES] : [...CATEGORIES];
+        let icons = isIncome ? { ...INCOME_CATEGORY_ICONS } : { ...CATEGORY_ICONS };
+
+        // Add custom categories
+        if (config && config.customCategories) {
+            const targetType = isIncome ? 'Receita' : 'Despesa';
+            config.customCategories.forEach(custom => {
+                if (custom.type === targetType && !categories.includes(custom.name)) {
+                    categories.push(custom.name);
+                    icons[custom.name] = custom.icon || 'fa-tag';
+                }
+            });
+        }
 
         grid.innerHTML = categories.map(cat => {
             const id = 'cat-' + cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
-            const icon = icons[cat] || 'fa-ellipsis';
+            const icon = icons[cat] || 'fa-tag';
+            
+            // Check if icon is font-awesome or emoji
+            const isFA = icon.startsWith('fa-');
+            const iconHtml = isFA ? `<i class="fa-solid ${icon}"></i>` : `<span class="cat-emoji">${icon}</span>`;
+            
             return `
                 <input type="radio" name="trans-category" id="${id}" value="${cat}" hidden>
-                <label for="${id}" class="cat-card"><i class="fa-solid ${icon}"></i><span>${cat}</span></label>
+                <label for="${id}" class="cat-card">${iconHtml}<span>${cat}</span></label>
             `;
         }).join('');
 

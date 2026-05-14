@@ -425,12 +425,76 @@ class PlanningController {
         budgetSel.innerHTML = options;
     }
 
+    renderRegistrations(config) {
+        this.renderWallets(config, window.app?.dashboardController?.transactions || []);
+        this.renderCards(config);
+        this.renderCustomCategories(config);
+    }
+
+    renderCustomCategories(config) {
+        const container = document.getElementById('custom-categories-list');
+        if (!container) return;
+
+        if (!config.customCategories || config.customCategories.length === 0) {
+            container.innerHTML = '<div class="empty-state">Nenhuma categoria personalizada.</div>';
+            return;
+        }
+
+        container.innerHTML = config.customCategories.map((cat, index) => `
+            <div class="card-item-config">
+                <div>
+                    <span class="cat-name">${cat.icon || '🏷️'} ${cat.name}</span>
+                    <span class="card-meta">Tipo: ${cat.type === 'Receita' ? 'Receita' : 'Despesa'}</span>
+                </div>
+                <button onclick="window.app.planningController.deleteCustomCategory(${index})" class="btn-mini-icon danger">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    async addCustomCategory(config) {
+        try {
+            const name = prompt('Nome da Categoria:');
+            if (!name) return;
+            const typeInput = prompt('Tipo (Receita ou Despesa):', 'Despesa');
+            const type = typeInput?.toLowerCase() === 'receita' ? 'Receita' : 'Despesa';
+            const icon = prompt('Ícone (emoji):', '🏷️') || '🏷️';
+
+            if (!config.customCategories) config.customCategories = [];
+            config.customCategories.push({ name, type, icon });
+
+            storageService.saveConfig(config);
+            await supabaseService.saveConfig(config);
+            
+            this.renderCustomCategories(config);
+            notificationService.success('Sucesso', 'Categoria personalizada adicionada!');
+        } catch (error) {
+            console.error("Erro ao adicionar categoria:", error);
+            notificationService.error('Erro', 'Falha ao adicionar categoria.');
+        }
+    }
+
+    async deleteCustomCategory(index) {
+        if (confirm('Deseja excluir esta categoria?')) {
+            try {
+                const config = window.app.config;
+                config.customCategories.splice(index, 1);
+                storageService.saveConfig(config);
+                await supabaseService.saveConfig(config);
+                this.renderCustomCategories(config);
+            } catch (error) {
+                console.error("Erro ao excluir categoria:", error);
+                notificationService.error('Erro', 'Falha ao excluir categoria.');
+            }
+        }
+    }
+
     render(config, transactions = []) {
         this.renderProfileSelectors(config);
         this.renderBudgets(config);
         this.renderScheduledBills(config);
-        this.renderCards(config);
-        this.renderWallets(config, transactions);
+        // We only render break-even and budgets in Planning tab
         this.renderBreakEven(config);
 
         SpiritualMentor.render('planning-insight-container', SpiritualMentor.getPlanningInsight(config));
