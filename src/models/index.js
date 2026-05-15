@@ -571,13 +571,11 @@ export class UserConfig {
             wallets: this.wallets,
             payees: this.payees,
             managedProfiles: this.managedProfiles,
-            userData: this.userData,
             workspace_id: this.workspace_id,
             simulations: this.simulations,
             investments: this.investments,
             customCategories: this.customCategories,
-            profileBudgets: this.profileBudgets,
-            selectedMentor: this.selectedMentor
+            profileBudgets: this.profileBudgets
         };
     }
 }

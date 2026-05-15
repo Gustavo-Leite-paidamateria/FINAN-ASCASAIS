@@ -1,4 +1,4 @@
-import { supabaseService, notificationService } from '../services/index.js';
+import { supabaseService, notificationService, storageService } from '../services/index.js';
 import { ManagedProfile } from '../models/index.js';
 
 export default class FamilyController {
@@ -17,34 +17,39 @@ export default class FamilyController {
         const shareContainer = document.getElementById('share-workspace-info');
         if (!container) return;
 
-        // Mostrar o ID do Workspace atual para compartilhamento
         if (shareContainer) {
             shareContainer.innerHTML = `
                 <div class="share-box">
-                    <p style="font-size: 0.8rem; color: var(--text-sec);">Código do seu Espaço (Envie para quem quiser convidar):</p>
+                    <p style="font-size: 0.8rem; color: var(--text-sec);">Link de convite do espaco atual:</p>
                     <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <input type="text" value="${supabaseService.currentWorkspaceId}" readonly style="flex: 1; font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.2);">
-                        <button onclick="navigator.clipboard.writeText('${supabaseService.currentWorkspaceId}'); window.app.notificationService.success('Copiado!', 'Envie este código para seu convidado.')" class="btn-primary" style="padding: 0 15px;">
+                        <input id="generated-invite-link" type="text" value="${this.buildInviteUrl()}" readonly style="flex: 1; font-family: monospace; font-size: 0.75rem; background: rgba(0,0,0,0.2);">
+                        <button onclick="window.app.familyController.copyInviteLink()" class="btn-primary" style="padding: 0 15px;" title="Copiar link">
                             <i class="fa-solid fa-copy"></i>
                         </button>
                     </div>
+                    <p style="font-size: 0.72rem; color: var(--text-sec); margin-top: 8px;">Digite o e-mail autorizado abaixo; o app gera um link valido por 7 dias para voce enviar.</p>
                 </div>
             `;
         }
 
         try {
-            const members = await supabaseService.getWorkspaces();
+            const members = await supabaseService.getWorkspaceMembers();
             container.innerHTML = members.map(m => `
                 <div class="config-item">
                     <div class="config-info">
-                        <strong>${m.workspaces.name}</strong>
+                        <strong>${m.user_id}</strong>
                         <span class="subtitle">Papel: ${m.role === 'owner' ? 'Dono' : 'Membro'}</span>
                     </div>
                 </div>
-            `).join('');
+            `).join('') || '<div class="empty-state">Nenhum membro encontrado.</div>';
         } catch (e) {
             console.error('Error rendering members:', e);
+            container.innerHTML = '<div class="empty-state">Nao foi possivel carregar os membros.</div>';
         }
+    }
+
+    renderMembersList(config) {
+        this.renderProfiles(config);
     }
 
     async joinExistingWorkspace() {
@@ -52,12 +57,11 @@ export default class FamilyController {
         const workspaceId = idInput?.value?.trim();
         if (!workspaceId) return;
 
-        notificationService.info('Aguarde', 'Entrando no espaço...');
+        notificationService.info('Aguarde', 'Entrando no espaco...');
 
         try {
             const { data: { user } } = await supabaseService.client.auth.getUser();
-            
-            // Adicionar-se como membro
+
             const { error } = await supabaseService.client
                 .from('workspace_members')
                 .insert({
@@ -68,14 +72,12 @@ export default class FamilyController {
 
             if (error) throw error;
 
-            notificationService.success('Sucesso!', 'Você agora faz parte deste espaço.');
+            notificationService.success('Sucesso!', 'Voce agora faz parte deste espaco.');
             idInput.value = '';
-            
-            // Recarregar app para assumir o novo contexto
             setTimeout(() => window.location.reload(), 1500);
         } catch (e) {
             console.error('Error joining workspace:', e);
-            notificationService.error('Erro', 'Código inválido ou sem permissão.');
+            notificationService.error('Erro', 'Codigo invalido ou sem permissao.');
         }
     }
 
@@ -85,7 +87,7 @@ export default class FamilyController {
         if (!container) return;
 
         const profiles = config.managedProfiles || [];
-        
+
         const html = profiles.map(p => `
             <div class="config-item">
                 <div class="config-info">
@@ -108,15 +110,16 @@ export default class FamilyController {
         const select = document.getElementById('profile-selector');
         if (!select) return;
 
-        const currentProfileId = supabaseService.currentProfileId;
-        
-        let options = `<option value="casal" ${!currentProfileId ? 'selected' : ''}>👫 Casal (Todos)</option>`;
-        
-        if (config) {
-            (config.managedProfiles || []).forEach(p => {
-                options += `<option value="${p.id}" ${currentProfileId === p.id ? 'selected' : ''}>👤 ${p.name}</option>`;
-            });
+        const profiles = config?.managedProfiles || [];
+        if (supabaseService.currentProfileId && !profiles.some(p => p.id === supabaseService.currentProfileId)) {
+            supabaseService.currentProfileId = null;
+            storageService.saveProfileId(null);
         }
+
+        let options = `<option value="casal" ${!supabaseService.currentProfileId ? 'selected' : ''}>Casal (Todos)</option>`;
+        profiles.forEach(p => {
+            options += `<option value="${p.id}" ${supabaseService.currentProfileId === p.id ? 'selected' : ''}>${p.name}</option>`;
+        });
 
         select.innerHTML = options;
     }
@@ -135,7 +138,6 @@ export default class FamilyController {
         config.managedProfiles.push(newProfile);
 
         try {
-            // Also insert into database table for better isolation if needed later
             const { error } = await supabaseService.client
                 .from('managed_profiles')
                 .insert({
@@ -158,7 +160,7 @@ export default class FamilyController {
     }
 
     async deleteProfile(id) {
-        if (!confirm('Excluir este perfil? As transações vinculadas a ele continuarão no workspace geral.')) return;
+        if (!confirm('Excluir este perfil? As transacoes vinculadas a ele continuarao no workspace geral.')) return;
 
         const config = window.app.config;
         config.managedProfiles = config.managedProfiles.filter(p => p.id !== id);
@@ -174,9 +176,9 @@ export default class FamilyController {
 
     async switchProfile(profileId) {
         supabaseService.currentProfileId = profileId === 'casal' ? null : profileId;
-        notificationService.info('Contexto Alterado', `Agora você está vendo os dados de: ${profileId === 'casal' ? 'Casal' : 'Perfil Selecionado'}`);
-        
-        // Reload all data for the new context
+        storageService.saveProfileId(supabaseService.currentProfileId);
+        notificationService.info('Contexto alterado', `Agora voce esta vendo os dados de: ${this.getProfileName(profileId)}`);
+
         await window.app.dashboardController.loadData(window.app.config);
         if (window.app.currentView === 'calendar-view') window.app.renderCalendar();
     }
@@ -185,21 +187,58 @@ export default class FamilyController {
         const email = document.getElementById('invite-email')?.value?.trim();
         if (!email) return;
 
-        notificationService.info('Aguarde', 'Enviando convite...');
-        
-        // Simulating invite for now as we don't have Edge Functions yet
-        // In a real app, this would call a Supabase function
-        setTimeout(() => {
-            notificationService.success('Convite Enviado', `Um convite foi enviado para ${email}.`);
+        notificationService.info('Aguarde', 'Criando convite...');
+
+        try {
+            const invite = await supabaseService.createWorkspaceInvitation(email);
+            const link = this.buildInviteUrl(invite.token);
+            const linkInput = document.getElementById('generated-invite-link');
+            if (linkInput) linkInput.value = link;
+            await this.copyText(link);
+            notificationService.success('Convite criado', `Link de convite para ${email} copiado.`);
             document.getElementById('invite-email').value = '';
-        }, 1500);
+        } catch (e) {
+            console.error('Error sending invite:', e);
+            notificationService.error('Erro', 'Falha ao criar convite. Confira se a migration de convites foi aplicada.');
+        }
+    }
+
+    buildInviteUrl(token = '') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('invite');
+        if (token) url.searchParams.set('invite', token);
+        url.hash = '';
+        return url.toString();
+    }
+
+    async copyInviteLink() {
+        const link = document.getElementById('generated-invite-link')?.value;
+        if (!link) return;
+        await this.copyText(link);
+        notificationService.success('Copiado', 'Link copiado para a area de transferencia.');
+    }
+
+    async copyText(text) {
+        if (navigator.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (e) {
+                console.warn('Clipboard unavailable:', e);
+            }
+        }
+    }
+
+    getProfileName(profileId) {
+        if (profileId === 'casal') return 'Casal';
+        const profile = (window.app?.config?.managedProfiles || []).find(p => p.id === profileId);
+        return profile?.name || 'Perfil selecionado';
     }
 
     setTab(tab) {
         this.activeTab = tab;
-        document.getElementById('family-tab-members').classList.toggle('active', tab === 'members');
-        document.getElementById('family-tab-profiles').classList.toggle('active', tab === 'profiles');
-        document.getElementById('family-content-members').classList.toggle('hidden', tab !== 'members');
-        document.getElementById('family-content-profiles').classList.toggle('hidden', tab !== 'profiles');
+        document.getElementById('family-tab-members')?.classList.toggle('active', tab === 'members');
+        document.getElementById('family-tab-profiles')?.classList.toggle('active', tab === 'profiles');
+        document.getElementById('family-content-members')?.classList.toggle('hidden', tab !== 'members');
+        document.getElementById('family-content-profiles')?.classList.toggle('hidden', tab !== 'profiles');
     }
 }

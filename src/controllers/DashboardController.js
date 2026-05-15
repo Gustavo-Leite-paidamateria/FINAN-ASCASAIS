@@ -363,7 +363,7 @@ class DashboardController {
 
     renderBudgets(config) {
         // Obter o perfil ativo no cabeçalho global
-        const activeProfile = window.app?.currentProfileId || 'casal';
+        const activeProfile = supabaseService.currentProfileId || 'casal';
         
         // Selecionar o conjunto de orçamentos correto
         const budgetSet = activeProfile === 'casal' 
@@ -443,7 +443,8 @@ class DashboardController {
         // Se estiver na visão de casal, atualizar o título para ser mais claro
         const budgetTitle = document.querySelector('.budget-section h3');
         if (budgetTitle) {
-            budgetTitle.textContent = activeProfile === 'casal' ? 'Orçamento do Casal' : `Orçamento Individual (${activeProfile === 'eu' ? 'Meu' : 'Dela'})`;
+            const profileName = (config.managedProfiles || []).find(p => p.id === activeProfile)?.name || 'Perfil';
+            budgetTitle.textContent = activeProfile === 'casal' ? 'Orçamento do Casal' : `Orçamento Individual (${profileName})`;
         }
     }
 

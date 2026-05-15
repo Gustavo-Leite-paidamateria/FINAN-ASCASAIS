@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
     THEME: 'finance_app_theme',
     TOUR_COMPLETED: 'tour_completed',
     SETUP_COMPLETED: 'setup_completed',
-    WORKSPACE_ID: 'finance_workspace_id'
+    WORKSPACE_ID: 'finance_workspace_id',
+    PROFILE_ID: 'finance_profile_id'
 };
 
 class StorageService {
@@ -81,6 +82,15 @@ class StorageService {
 
     getWorkspaceId() {
         return localStorage.getItem(STORAGE_KEYS.WORKSPACE_ID);
+    }
+
+    saveProfileId(id) {
+        if (id) localStorage.setItem(STORAGE_KEYS.PROFILE_ID, id);
+        else localStorage.removeItem(STORAGE_KEYS.PROFILE_ID);
+    }
+
+    getProfileId() {
+        return localStorage.getItem(STORAGE_KEYS.PROFILE_ID);
     }
 
     clearAll() {

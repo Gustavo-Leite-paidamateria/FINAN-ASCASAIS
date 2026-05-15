@@ -146,7 +146,7 @@ class AuthController {
     }
 
     refreshHeader(config) {
-        const userData = config?.userData || {};
+        const userData = this.getUserProfileData(config);
         const displayName = userData.display_name;
         const avatarUrl = userData.avatar_url;
         const email = storageService.getUser() || 'Usuário';
@@ -174,6 +174,13 @@ class AuthController {
     async saveProfile(config, displayName, avatarBase64, newPassword, confirmPassword, selectedMentor) {
         let changed = false;
 
+        const currentProfile = this.getUserProfileData(config);
+        const nextProfile = {
+            display_name: displayName ?? currentProfile.display_name ?? '',
+            avatar_url: avatarBase64 !== null ? avatarBase64 : currentProfile.avatar_url || null,
+            selected_mentor: selectedMentor || currentProfile.selected_mentor || 'PASTOR_TRADICIONAL'
+        };
+
         if (selectedMentor && selectedMentor !== config.selectedMentor) {
             config.selectedMentor = selectedMentor;
             changed = true;
@@ -196,13 +203,22 @@ class AuthController {
             }
         }
 
-        if (!config.userData) config.userData = {};
-        if (displayName !== undefined) { config.userData.display_name = displayName; changed = true; }
-        if (avatarBase64 !== null) { config.userData.avatar_url = avatarBase64; changed = true; }
+        try {
+            await supabaseService.updateUserMetadata(nextProfile);
+        } catch (e) {
+            notificationService.error('Erro', 'Falha ao atualizar perfil: ' + e.message);
+            return false;
+        }
+
+        config.userData = {
+            display_name: nextProfile.display_name,
+            avatar_url: nextProfile.avatar_url
+        };
+        config.selectedMentor = nextProfile.selected_mentor;
+        changed = true;
 
         if (changed) {
             storageService.saveConfig(config);
-            await supabaseService.saveConfig(config);
         }
 
         this.refreshHeader(config);
@@ -237,6 +253,19 @@ class AuthController {
 
     async initializeApp() {
         try {
+            const inviteToken = this.getInviteToken();
+            if (inviteToken) {
+                try {
+                    const invite = await supabaseService.acceptWorkspaceInvite(inviteToken);
+                    storageService.saveWorkspaceId(invite.workspace_id);
+                    this.clearInviteTokenFromUrl();
+                    notificationService.success('Convite aceito', 'Voce entrou no espaco compartilhado.');
+                } catch (inviteError) {
+                    console.error('Invite accept error:', inviteError);
+                    notificationService.error('Convite invalido', 'Nao foi possivel aceitar este convite. Verifique se ele expirou ou se foi enviado para este e-mail.');
+                }
+            }
+
             // 1. Get Workspace
             let workspaces = await supabaseService.getWorkspaces();
             if (!workspaces || workspaces.length === 0) {
@@ -251,6 +280,9 @@ class AuthController {
             
             supabaseService.currentWorkspaceId = preferredWs.workspace_id;
             storageService.saveWorkspaceId(preferredWs.workspace_id);
+
+            const savedProfileId = storageService.getProfileId();
+            supabaseService.currentProfileId = savedProfileId || null;
 
             // Guardar a lista para o seletor na UI
             this.availableWorkspaces = workspaces;
@@ -292,6 +324,17 @@ class AuthController {
         }
     }
 
+    getInviteToken() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('invite');
+    }
+
+    clearInviteTokenFromUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('invite');
+        window.history.replaceState({}, document.title, url.toString());
+    }
+
     async loadConfig() {
         let config = new UserConfig();
 
@@ -314,7 +357,35 @@ class AuthController {
             config.wallets = [{ id: 'w_default', name: 'Conta Principal', initialBalance: 0 }];
         }
 
+        await this.applyCurrentUserProfile(config);
+
         return config;
+    }
+
+    getUserProfileData(config = null) {
+        const user = this.currentUser;
+        const metadata = user?.user_metadata || {};
+        return {
+            display_name: metadata.display_name || '',
+            avatar_url: metadata.avatar_url || '',
+            selected_mentor: metadata.selected_mentor || 'PASTOR_TRADICIONAL'
+        };
+    }
+
+    async applyCurrentUserProfile(config) {
+        try {
+            this.currentUser = await supabaseService.getCurrentUser();
+        } catch (e) {
+            console.warn('Error loading user profile metadata:', e);
+        }
+
+        const profile = this.getUserProfileData(config);
+        config.userData = {
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url
+        };
+        config.selectedMentor = profile.selected_mentor;
+        storageService.saveConfig(config);
     }
 
     checkSetupNeeded(config) {

@@ -65,7 +65,7 @@ class SupabaseService {
 
     async fetchTransactions(startDate, endDate) {
         this.init();
-        const { data, error } = await this.client
+        let query = this.client
             .from('financeiro')
             .select('*')
             .eq('workspace_id', this.currentWorkspaceId)
@@ -73,6 +73,11 @@ class SupabaseService {
             .lte('data', endDate.toISOString())
             .order('data', { ascending: false });
 
+        if (this.currentProfileId) {
+            query = query.eq('profile_id', this.currentProfileId);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         return (data || []).map(t => Transaction.parseFromDb(t));
     }
@@ -119,7 +124,11 @@ class SupabaseService {
 
     async deleteTransaction(id) {
         this.init();
-        const { error } = await this.client.from('financeiro').delete().eq('id', id);
+        const { error } = await this.client
+            .from('financeiro')
+            .delete()
+            .eq('id', id)
+            .eq('workspace_id', this.currentWorkspaceId);
         if (error) throw error;
     }
 
@@ -128,6 +137,7 @@ class SupabaseService {
         const { error } = await this.client
             .from('financeiro')
             .delete()
+            .eq('workspace_id', this.currentWorkspaceId)
             .gte('data', startDate.toISOString())
             .lte('data', endDate.toISOString());
         if (error) throw error;
@@ -135,7 +145,11 @@ class SupabaseService {
 
     async fetchTransactionsRaw(startDate = null, endDate = null) {
         this.init();
-        let query = this.client.from('financeiro').select('*').order('data', { ascending: false });
+        let query = this.client
+            .from('financeiro')
+            .select('*')
+            .eq('workspace_id', this.currentWorkspaceId)
+            .order('data', { ascending: false });
         
         if (startDate) query = query.gte('data', startDate instanceof Date ? startDate.toISOString() : startDate);
         if (endDate) query = query.lte('data', endDate instanceof Date ? endDate.toISOString() : endDate);
@@ -164,6 +178,20 @@ class SupabaseService {
         this.init();
         const { error } = await this.client.auth.updateUser({ password: newPassword });
         if (error) throw error;
+    }
+
+    async updateUserMetadata(metadata) {
+        this.init();
+        const { data, error } = await this.client.auth.updateUser({ data: metadata });
+        if (error) throw error;
+        return data.user;
+    }
+
+    async getCurrentUser() {
+        this.init();
+        const { data, error } = await this.client.auth.getUser();
+        if (error) throw error;
+        return data.user;
     }
 
     async saveConfig(config) {
@@ -213,6 +241,81 @@ class SupabaseService {
 
         console.log("Workspaces encontrados para o usuário:", result);
         return result;
+    }
+
+    async getWorkspaceMembers() {
+        this.init();
+        if (!this.currentWorkspaceId) return [];
+
+        const { data, error } = await this.client
+            .from('workspace_members')
+            .select('workspace_id, user_id, role, created_at')
+            .eq('workspace_id', this.currentWorkspaceId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+    }
+
+    async createWorkspaceInvitation(email) {
+        this.init();
+        if (!this.currentWorkspaceId) throw new Error('Workspace nao selecionado');
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const token = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: { session } } = await this.client.auth.getSession();
+        if (!session) throw new Error('Usuario nao autenticado');
+
+        const { data, error } = await this.client
+            .from('workspace_invitations')
+            .insert({
+                workspace_id: this.currentWorkspaceId,
+                invited_email: normalizedEmail,
+                invited_by: session.user.id,
+                token,
+                expires_at: expiresAt
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async acceptWorkspaceInvite(token) {
+        this.init();
+        const { data: { session } } = await this.client.auth.getSession();
+        if (!session) throw new Error('Usuario nao autenticado');
+
+        const { data: invite, error: inviteError } = await this.client
+            .from('workspace_invitations')
+            .select('*')
+            .eq('token', token)
+            .is('accepted_at', null)
+            .gt('expires_at', new Date().toISOString())
+            .single();
+
+        if (inviteError) throw inviteError;
+        if (!invite) throw new Error('Convite invalido ou expirado');
+
+        const { error: memberError } = await this.client
+            .from('workspace_members')
+            .upsert({
+                workspace_id: invite.workspace_id,
+                user_id: session.user.id,
+                role: 'member'
+            });
+
+        if (memberError) throw memberError;
+
+        await this.client
+            .from('workspace_invitations')
+            .update({ accepted_at: new Date().toISOString() })
+            .eq('id', invite.id);
+
+        this.currentWorkspaceId = invite.workspace_id;
+        return invite;
     }
 
     async fetchManagedProfiles() {
