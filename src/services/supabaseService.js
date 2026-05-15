@@ -2,6 +2,7 @@ import { Transaction, UserConfig } from '../models/index.js';
 
 const SUPABASE_URL = 'https://owxgvzuhunvsxondmifu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93eGd2enVodW52c3hvbmRtaWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2MDYzMzQsImV4cCI6MjA2NTE4MjMzNH0.W52BHGvTGPleNrFQ3SLDlilhPOg6eX_uXP2cDRArou0';
+const APP_PUBLIC_URL = 'https://gustavo-leite-paidamateria.github.io/FINAN-ASCASAIS/';
 
 class SupabaseService {
     constructor() {
@@ -45,9 +46,19 @@ class SupabaseService {
     async resetPassword(email) {
         this.init();
         const { error } = await this.client.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + window.location.pathname
+            redirectTo: this.getRedirectUrl()
         });
         if (error) throw error;
+    }
+
+    getRedirectUrl() {
+        try {
+            const current = new URL(window.location.href);
+            const isLocal = ['localhost', '127.0.0.1'].includes(current.hostname);
+            return isLocal ? APP_PUBLIC_URL : `${current.origin}${current.pathname}`;
+        } catch (e) {
+            return APP_PUBLIC_URL;
+        }
     }
 
     async logoutUser() {
